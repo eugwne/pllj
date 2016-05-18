@@ -1,0 +1,5 @@
+\set ECHO none
+do $$
+print("Hello LuaJIT FFI")
+$$ language pllj
+INFO:  Hello LuaJIT FFI
