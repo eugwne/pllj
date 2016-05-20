@@ -4,4 +4,13 @@ CREATE EXTENSION pllj;
 
 do $$
 print("Hello LuaJIT FFI")
-$$ language pllj
+$$ language pllj;
+
+create table pg_temp.test(txt text);
+
+do $$
+local spi = require("pllj.spi")
+spi.execute("insert into pg_temp.test(txt) values('qwerty')")
+$$ language pllj;
+
+select * from pg_temp.test;

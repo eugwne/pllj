@@ -1,5 +1,16 @@
 \set ECHO none
 do $$
 print("Hello LuaJIT FFI")
-$$ language pllj
+$$ language pllj;
 INFO:  Hello LuaJIT FFI
+create table pg_temp.test(txt text);
+do $$
+local spi = require("pllj.spi")
+spi.execute("insert into pg_temp.test(txt) values('qwerty')")
+$$ language pllj;
+select * from pg_temp.test;
+  txt   
+--------
+ qwerty
+(1 row)
+

@@ -10,4 +10,9 @@ pgdefines.elog = {
 	["PANIC"] = 22
 }
 
+pgdefines.spi = {
+  ["SPI_OK_CONNECT"] = 1,
+  ["SPI_OK_SELECT"] = 5
+}
+
 return pgdefines

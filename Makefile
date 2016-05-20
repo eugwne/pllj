@@ -25,3 +25,4 @@ install-module:
 	mkdir -p $(LUA_DIR)/pllj
 	cp src/pllj.lua $(LUA_DIR)/pllj.lua
 	cp src/pllj/pgdefines.lua $(LUA_DIR)/pllj/pgdefines.lua
+	cp src/pllj/spi.lua $(LUA_DIR)/pllj/spi.lua
