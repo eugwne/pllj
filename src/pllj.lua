@@ -33,11 +33,11 @@ end
 
 function pllj.inlinehandler (...)
   local text = select(1, ...)
-  f = loadstring(text)
+  local f, error = loadstring(text)
   if (f) then 
     f() 
   else 
-    throw('can not execute') 
+    throw(error) 
   end
 end
 
