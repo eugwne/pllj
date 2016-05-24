@@ -10,6 +10,10 @@ pgdefines.elog = {
 	["PANIC"] = 22
 }
 
+pgdefines.pg_config_manual = {
+  ["NAMEDATALEN"] = 64
+}
+
 pgdefines.spi = {
   ["SPI_OK_CONNECT"] = 1,
   ["SPI_OK_SELECT"] = 5

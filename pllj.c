@@ -7,6 +7,8 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 
+#include "access/htup_details.h"
+
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
 #endif
@@ -15,6 +17,8 @@ PG_MODULE_MAGIC;
 #include <lualib.h>
 #include <lauxlib.h>
 #include <luajit.h>
+
+#define out(...) ereport(INFO, (errmsg(__VA_ARGS__)))
 
 static lua_State *L = NULL;
 static int inline_ref = 0;
@@ -32,6 +36,12 @@ static Datum lj_inlinehandler (const char *source) {
 	lua_pcall(L, 1, 0, 0);
 
 	PG_RETURN_VOID();
+}
+
+extern Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
+Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull){
+    Datum value = heap_getattr(tuple, attnum, tupleDesc, isnull);
+    return value;
 }
 
 PGDLLEXPORT Datum _PG_init(PG_FUNCTION_ARGS);
