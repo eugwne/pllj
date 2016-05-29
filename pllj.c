@@ -19,6 +19,74 @@ PG_MODULE_MAGIC;
 #include <luajit.h>
 
 #define out(...) ereport(INFO, (errmsg(__VA_ARGS__)))
+#define pg_throw(...) ereport(ERROR, (errmsg(__VA_ARGS__)))
+
+#define luapg_error(L)do{\
+  if (lua_type(L, -1) == LUA_TSTRING){ \
+    const char *err = pstrdup( lua_tostring((L), -1)); \
+    lua_pop(L, lua_gettop(L));\
+    ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), \
+      errmsg("[pllj]: error"),\
+      errdetail("%s", err)));\
+  }else {\
+	luatable_report(L, ERROR);\
+  }\
+}while(0)
+
+
+static void pllua_parse_error(lua_State *L, ErrorData *edata){
+	lua_pushnil(L);
+	while (lua_next(L, -2) != 0) {
+	if (lua_type(L, -2) == LUA_TSTRING){
+		const char *key = lua_tostring(L, -2);
+		if (lua_type(L, -1) == LUA_TSTRING){
+			if (strcmp(key, "message") == 0){
+				edata->message = pstrdup( lua_tostring(L, -1) );
+			} else if (strcmp(key, "detail") == 0){
+				edata->detail = pstrdup( lua_tostring(L, -1) );
+			}  else if (strcmp(key, "hint") == 0){
+				edata->hint = pstrdup( lua_tostring(L, -1) );
+			} else if (strcmp(key, "context") == 0){
+				edata->context = pstrdup( lua_tostring(L, -1) );
+			}
+
+		}else if (lua_type(L, -1) == LUA_TNUMBER){
+			if (strcmp(key, "sqlerrcode") == 0){
+				edata->sqlerrcode = (int)( lua_tonumber(L, -1) );
+			}
+		}
+	}
+	lua_pop(L, 1);
+	}
+}
+
+static void luatable_report(lua_State *L, int elevel)
+{
+	ErrorData	edata;
+
+	char *query = NULL;
+	int position = 0;
+
+	edata.message = NULL;
+	edata.sqlerrcode = 0;
+	edata.detail = NULL;
+	edata.hint = NULL;
+	edata.context = NULL;
+
+	pllua_parse_error(L, &edata);
+	lua_pop(L, lua_gettop(L));
+
+	elevel = Min(elevel, ERROR);
+
+	ereport(elevel,
+	        (errcode(edata.sqlerrcode ? edata.sqlerrcode : ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+	         errmsg_internal("%s", edata.message ? edata.message : "no exception data"),
+	         (edata.detail) ? errdetail_internal("%s", edata.detail) : 0,
+	         (edata.context) ? errcontext("%s", edata.context) : 0,
+	         (edata.hint) ? errhint("%s", edata.hint) : 0,
+	         (query) ? internalerrquery(query) : 0,
+	         (position) ? internalerrposition(position) : 0));
+}
 
 static lua_State *L = NULL;
 static int inline_ref = 0;
@@ -31,17 +99,31 @@ static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 	PG_RETURN_VOID();
 }
 static Datum lj_inlinehandler (const char *source) {
+	int status = 0;
+	lua_settop(L, 0);
 	lua_rawgeti(L, LUA_REGISTRYINDEX, inline_ref);
 	lua_pushstring(L, source);
-	lua_pcall(L, 1, 0, 0);
+	status = lua_pcall(L, 1, 0, 0);
 
-	PG_RETURN_VOID();
+	if (status == 0){
+		PG_RETURN_VOID();
+	}
+
+	if( status == LUA_ERRRUN) {
+		luapg_error(L);
+	} else if (status == LUA_ERRMEM) {
+		pg_throw("%s %s","Memory error:",lua_tostring(L, -1));
+	} else if (status == LUA_ERRERR) {
+		pg_throw("%s %s","Error:",lua_tostring(L, -1));
+	}
+
+	pg_throw("pllj unknown error");
 }
 
 extern Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
 Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull){
-    Datum value = heap_getattr(tuple, attnum, tupleDesc, isnull);
-    return value;
+	Datum value = heap_getattr(tuple, attnum, tupleDesc, isnull);
+	return value;
 }
 
 PGDLLEXPORT Datum _PG_init(PG_FUNCTION_ARGS);

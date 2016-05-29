@@ -18,16 +18,12 @@ print = function(text)
   ffi.C.errfinish(ffi.C.errmsg(tostring(text)))
 end
 
-throw = function(text)
-  ffi.C.errstart(pgdef.elog["ERROR"], "", 0, nil, nil)
-  ffi.C.errfinish(ffi.C.errmsg(tostring(text)))
-end
-
 local spi = require('pllj.spi')
 
 function pllj.validator (...)
 
 end
+
 
 function pllj.callhandler (...)
   spi.disconnect()
@@ -35,13 +31,35 @@ end
 
 function pllj.inlinehandler (...)
   local text = select(1, ...)
-  local f, error = loadstring(text)
+  local f, err = loadstring(text)
   if (f) then 
-    f() 
+    local status, err = xpcall(f, function(err) 
+        if type(err) == "table" then
+        if err.detail == nil then
+          err.detail = debug.traceback()
+        end
+        return err
+      else
+        return {message = err, detail = debug.traceback()} 
+      end
+      
+    end) 
     spi.disconnect()
+    if status ~= true then
+      if type(err) == "table" then
+        if err.detail == nil then
+          err.detail = debug.traceback()
+        end
+        error(err)
+      else
+        error({message = err, detail = debug.traceback()} ) 
+      end
+    end
+    
+    
   else 
     spi.disconnect()
-    throw(error) 
+    error(err) 
   end
 end
 
