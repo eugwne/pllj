@@ -1,5 +1,7 @@
 local spi = {}
 
+require('pllj.pg.palloc')
+
 local ffi = require('ffi')
 
 local NULL = ffi.new("void*")
@@ -12,6 +14,7 @@ local NAMEDATALEN = pgdef.pg_config_manual["NAMEDATALEN"]
 
 
 ffi.cdef[[
+typedef char *Pointer;
 typedef unsigned int Oid;
 typedef uintptr_t Datum;
 typedef int32_t int32;
@@ -55,7 +58,6 @@ typedef struct tupleDesc
 	int			tdrefcount;		/* reference count, or -1 if not counting */
 }	s_tupleDesc, *TupleDesc;
 
-
 /*----------------------------*/
 
 typedef struct BlockIdData
@@ -86,12 +88,7 @@ typedef struct HeapTupleData
 
 typedef HeapTupleData *HeapTuple;
 
-
-
-
 typedef uint32_t SubTransactionId;
-typedef struct MemoryContextData *MemoryContext;
-
 
 typedef struct SPITupleTable
 {
@@ -109,8 +106,6 @@ SPITupleTable *SPI_tuptable;
 void SPI_freetuptable(SPITupleTable *tuptable);
 ]]
 
-
-
 local function connect()
   if (spi_connected == false) then
     if (ffi.C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
@@ -118,7 +113,7 @@ local function connect()
     end
     spi_connected = true
   end
-  
+
 end
 
 ffi.cdef[[
@@ -130,7 +125,33 @@ Datum SPI_getbinval(HeapTuple row, TupleDesc rowdesc, int colnumber,
                     bool * isnull); /* del ? */
 Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
 
+HeapTuple SearchSysCache(int cacheId,
+			   Datum key1, Datum key2, Datum key3, Datum key4);
+         
+
+
 ]]
+
+local pg_type = require('pllj.pg.pg_type')
+local syscache = require('pllj.pg.syscache')
+local typeto = {
+  [pg_type["TEXTOID"]] = function (datum) 
+    local d = ffi.C.DirectFunctionCall1Coll(ffi.C.textout, 0, datum)
+    return ffi.string(ffi.cast('Pointer', d))
+  end
+}
+
+require('pllj.pg.builtins')
+local function datum_to_value(datum, atttypid)
+
+  local func = typeto[atttypid]
+  if (func) then
+    return func(datum)
+  end
+  return datum --TODO other types
+  --print("SC = "..tonumber(syscache.enum.TYPEOID))
+  --type = ffi.C.SearchSysCache(syscache.enum.TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
+end
 
 function spi.execute(query)
   connect()
@@ -153,11 +174,13 @@ function spi.execute(query)
         local attname = tupleDesc.attrs[k].attname;
         local columnName =  (ffi.string(attname, NAMEDATALEN))
         local attnum = tupleDesc.attrs[k].attnum;
+        local atttypid = tupleDesc.attrs[k].atttypid;
 
         local isNull = ffi.new("bool[?]", 1)
         --local val = ffi.C.SPI_getbinval(tuple, tupleDesc, k, isNull)
 
         local val = ffi.C.pllj_heap_getattr(tuple, attnum, tupleDesc,  isNull)
+        val = datum_to_value(val, atttypid) 
 
         row[k+1] = isNull[0] == false and val or NULL
 
@@ -165,21 +188,22 @@ function spi.execute(query)
       rows[i+1] = row
 
     end
+
     ffi.C.SPI_freetuptable(SPI_tuptable);
     return rows
-    
+
   else
     return {}
   end
-  
-  
+
+
 end
 
 function spi.disconnect()
-    if spi_connected then
-      ffi.C.SPI_finish()
-      spi_connected = false
-    end
+  if spi_connected then
+    ffi.C.SPI_finish()
+    spi_connected = false
+  end
 end
 
 

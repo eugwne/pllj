@@ -23,4 +23,6 @@ for _, row in ipairs(result) do
 		print (tonumber(col))
 	end
 end
+result = spi.execute("select 'test'::text ")
+print(result[1][1])
 $$ language pllj;
