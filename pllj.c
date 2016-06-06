@@ -89,6 +89,7 @@ static void luatable_report(lua_State *L, int elevel)
 }
 
 static lua_State *L = NULL;
+static int call_ref = 0;
 static int inline_ref = 0;
 
 static Datum lj_validator (Oid oid) {
@@ -96,7 +97,25 @@ static Datum lj_validator (Oid oid) {
 }
 
 static Datum lj_callhandler (FunctionCallInfo fcinfo) {
-	PG_RETURN_VOID();
+	int status = 0;
+	lua_settop(L, 0);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, call_ref);
+	lua_pushlightuserdata(L, (void *)fcinfo);
+	status = lua_pcall(L, 1, 0, 0);
+
+	if (status == 0){
+		PG_RETURN_VOID();
+	}
+
+	if( status == LUA_ERRRUN) {
+		luapg_error(L);
+	} else if (status == LUA_ERRMEM) {
+		pg_throw("%s %s","Memory error:",lua_tostring(L, -1));
+	} else if (status == LUA_ERRERR) {
+		pg_throw("%s %s","Error:",lua_tostring(L, -1));
+	}
+
+	pg_throw("pllj unknown error");
 }
 static Datum lj_inlinehandler (const char *source) {
 	int status = 0;
@@ -153,6 +172,8 @@ Datum _PG_init(PG_FUNCTION_ARGS) {
 		return 1;
 	lua_getfield(L, 1, "inlinehandler");
 	inline_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
+	lua_getfield(L, 1, "callhandler");
+	call_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_settop(L, 0);
 
 	PG_RETURN_VOID();

@@ -4,7 +4,7 @@ require('pllj.pg.palloc')
 
 local ffi = require('ffi')
 
-local NULL = ffi.new("void*")
+local NULL = require('pllj.pg.c').NULL
 
 local spi_connected = false;
 
@@ -14,12 +14,6 @@ local NAMEDATALEN = pgdef.pg_config_manual["NAMEDATALEN"]
 
 
 ffi.cdef[[
-typedef char *Pointer;
-typedef unsigned int Oid;
-typedef uintptr_t Datum;
-typedef int32_t int32;
-typedef int16_t int16;
-
 int	SPI_connect(void);
 int	SPI_finish(void);
 int	SPI_execute(const char *src, bool read_only, long tcount);
@@ -29,11 +23,6 @@ uint32_t SPI_processed;
 --[[#define NAMEDATALEN 64]]
 ffi.cdef[[
 
-typedef struct nameData
-{
-	char		data[64/*NAMEDATALEN*/];
-} NameData;
-typedef NameData *Name;
 
 typedef struct Form_pg_attribute_data{
 	Oid			attrelid;		/* OID of relation containing this attribute */
@@ -117,7 +106,58 @@ local function connect()
 end
 
 ffi.cdef[[
-typedef struct HeapTupleHeaderData HeapTupleHeaderData;
+typedef struct HeapTupleFields
+{
+	TransactionId t_xmin;		/* inserting xact ID */
+	TransactionId t_xmax;		/* deleting or locking xact ID */
+
+	union
+	{
+		CommandId	t_cid;		/* inserting or deleting command ID, or both */
+		TransactionId t_xvac;	/* old-style VACUUM FULL xact ID */
+	}			t_field3;
+} HeapTupleFields;
+
+typedef struct DatumTupleFields
+{
+	int32		datum_len_;		/* varlena header (do not touch directly!) */
+
+	int32		datum_typmod;	/* -1, or identifier of a record type */
+
+	Oid			datum_typeid;	/* composite type OID, or RECORDOID */
+
+	/*
+	 * Note: field ordering is chosen with thought that Oid might someday
+	 * widen to 64 bits.
+	 */
+} DatumTupleFields;
+
+typedef struct HeapTupleHeaderData
+{
+	union
+	{
+		HeapTupleFields t_heap;
+		DatumTupleFields t_datum;
+	}			t_choice;
+  
+  ItemPointerData t_ctid;		/* current TID of this or newer tuple (or a
+								 * speculative insertion token) */
+
+	/* Fields below here must match MinimalTupleData! */
+
+	uint16		t_infomask2;	/* number of attributes + various flags */
+
+	uint16		t_infomask;		/* various flag bits, see below */
+
+	uint8		t_hoff;			/* sizeof header incl. bitmap, padding */
+
+	/* ^ - 23 bytes - ^ */
+
+	bits8		t_bits[/*FLEXIBLE_ARRAY_MEMBER*/];	/* bitmap of NULLs */
+  
+} HeapTupleHeaderData;
+
+//typedef struct HeapTupleHeaderData HeapTupleHeaderData;
 typedef HeapTupleHeaderData *HeapTupleHeader;
 typedef int16_t AttrNumber;
 
@@ -125,23 +165,17 @@ Datum SPI_getbinval(HeapTuple row, TupleDesc rowdesc, int colnumber,
                     bool * isnull); /* del ? */
 Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
 
-HeapTuple SearchSysCache(int cacheId,
-			   Datum key1, Datum key2, Datum key3, Datum key4);
-         
-
-
 ]]
 
 local pg_type = require('pllj.pg.pg_type')
 local syscache = require('pllj.pg.syscache')
+local builtins = require('pllj.pg.builtins')
+
 local typeto = {
-  [pg_type["TEXTOID"]] = function (datum) 
-    local d = ffi.C.DirectFunctionCall1Coll(ffi.C.textout, 0, datum)
-    return ffi.string(ffi.cast('Pointer', d))
-  end
+  [pg_type["TEXTOID"]] = builtins.pg_text_tolua 
 }
 
-require('pllj.pg.builtins')
+
 local function datum_to_value(datum, atttypid)
 
   local func = typeto[atttypid]

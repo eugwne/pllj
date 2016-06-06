@@ -71,7 +71,15 @@ ffi.cdef[[
       USERMAPPINGUSERSERVER
     };
   };
-  ]]
-  local enum = ffi.new("struct syscache")
+HeapTuple SearchSysCache(int cacheId,
+			   Datum key1, Datum key2, Datum key3, Datum key4);
+void ReleaseSysCache(HeapTuple tuple);
+
+typedef int16 AttrNumber;
+Datum SysCacheGetAttr(int cacheId, HeapTuple tup,
+				AttrNumber attributeNumber, bool *isNull);
+]]
+
+local enum = ffi.new("struct syscache")
   
-  return {enum = enum}
+return {enum = enum}

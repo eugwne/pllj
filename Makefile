@@ -32,3 +32,5 @@ install-module:
 	cp src/pllj/pg/fmgr.lua $(LUA_DIR)/pllj/pg/fmgr.lua
 	cp src/pllj/pg/palloc.lua $(LUA_DIR)/pllj/pg/palloc.lua
 	cp src/pllj/pg/builtins.lua $(LUA_DIR)/pllj/pg/builtins.lua
+	cp src/pllj/pg/pg_proc.lua $(LUA_DIR)/pllj/pg/pg_proc.lua
+	cp src/pllj/pg/c.lua $(LUA_DIR)/pllj/pg/c.lua
