@@ -3,6 +3,8 @@ local ffi = require('ffi')
 require('pllj.pg.palloc')
 --#define FUNC_MAX_ARGS		100
 ffi.cdef[[
+struct varlena *pg_detoast_datum(struct varlena * datum);
+ 
 typedef struct Node *fmNodePtr;
 
 typedef struct FunctionCallInfoData *FunctionCallInfo;

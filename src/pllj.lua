@@ -16,10 +16,11 @@ extern bool errstart(int elevel, const char *filename, int lineno,
 extern void errfinish(int dummy,...);
 int	errmsg(const char *fmt,...);
 ]]
+local C = ffi.C;
 
 print = function(text)
-  ffi.C.errstart(pgdef.elog["INFO"], "", 0, nil, nil)
-  ffi.C.errfinish(ffi.C.errmsg(tostring(text)))
+  C.errstart(pgdef.elog["INFO"], "", 0, nil, nil)
+  C.errfinish(C.errmsg(tostring(text)))
 end
 
 local spi = require('pllj.spi')
@@ -35,8 +36,34 @@ end
 local builtins = require('pllj.pg.builtins')
 local pg_proc = require('pllj.pg.pg_proc')
 
+local function get_pg_typeinfo(oid)
+  local t = C.SearchSysCache(syscache.enum.TYPEOID, --[[ObjectIdGetDatum]](oid), 0, 0, 0);
+  local tstruct = ffi.cast('Form_pg_type', macro_GETSTRUCT(t));
+  print("-----tstruct------")
+  print(tstruct.typlen)
+  print(tstruct.typtype)
+  print(tstruct.typalign)
+  print(tstruct.typbyval)
+  print(tstruct.typelem)
+  print("------------------")
+  C.ReleaseSysCache(t)
+end
+
+local function macro_PG_DETOAST_DATUM(datum)
+  return C.pg_detoast_datum(ffi.cast('struct varlena*', ffi.cast('Pointer', datum)))
+end
+
+
+local function macro_DatumGetArrayTypeP(X)
+  return ffi.cast('ArrayType *',macro_PG_DETOAST_DATUM(X))
+end
+
+
+local pg_type = require('pllj.pg.pg_type')
+require('pllj.pg.array')
 local function get_func_from_oid(oid)
-  local proc = ffi.C.SearchSysCache(syscache.enum.PROCOID, --[[ObjectIdGetDatum]](oid), 0, 0, 0);
+  local isNull = ffi.new("bool[?]", 1)
+  local proc = C.SearchSysCache(syscache.enum.PROCOID, --[[ObjectIdGetDatum]](oid), 0, 0, 0);
 
   print(proc)
   local procst = ffi.cast('Form_pg_proc', macro_GETSTRUCT(proc));
@@ -45,22 +72,45 @@ local function get_func_from_oid(oid)
   local argtypes = procst.proargtypes.values;
   local rettype = procst.prorettype;
   local isset = procst.proretset;
-  print(procst)
-  print(argtypes)
-  print(nargs)
-  print('rettype  '..rettype)
+--  print(procst)
+--  print(argtypes)
+--  print(nargs)
+--  print('rettype  '..rettype)
 
-  for i = 0, nargs-1 do
-    print('argtype '..tostring(argtypes[i]))
+--  for i = 0, nargs-1 do
+--    print('argtype '..tostring(argtypes[i]))
+--    get_pg_typeinfo(argtypes[i])
+--  end
+  if nargs > 0 then
+    local nnames = ffi.new("int[?]", 1)
+    local argnames = C.SysCacheGetAttr(syscache.enum.PROCOID, proc,
+        pg_proc.defines.Anum_pg_proc_proargnames, isNull)
+    if isNull[0] == false then
+      local argname = ffi.new 'Datum *[1]'
+      C.deconstruct_array(macro_DatumGetArrayTypeP(argnames), pg_type["TEXTOID"], -1, false,
+          string.byte('i'), argname, nil, nnames)
+      print(argname)
+      print(nnames[0])
+      for i = 0, nnames[0] - 1 do
+        print(builtins.pg_text_tolua(argname[0][i]))
+      end
+      
+    end
+    
   end
   
+  
 
-  local isNull = ffi.new("bool[?]", 1)
-  local prosrc = ffi.C.SysCacheGetAttr(syscache.enum.PROCOID, proc, pg_proc.defines.Anum_pg_proc_prosrc, isNull);
+  
+  local prosrc = C.SysCacheGetAttr(syscache.enum.PROCOID, proc, pg_proc.defines.Anum_pg_proc_prosrc, isNull);
   prosrc = builtins.pg_text_tolua(prosrc)
+  if (isNull[0] == true) then
+		error( "null prosrc for function ".. oid);
+  end
+  
   print(prosrc)
   
-  ffi.C.ReleaseSysCache(proc)
+  C.ReleaseSysCache(proc)
   return nil
 end
 

@@ -34,3 +34,4 @@ install-module:
 	cp src/pllj/pg/builtins.lua $(LUA_DIR)/pllj/pg/builtins.lua
 	cp src/pllj/pg/pg_proc.lua $(LUA_DIR)/pllj/pg/pg_proc.lua
 	cp src/pllj/pg/c.lua $(LUA_DIR)/pllj/pg/c.lua
+	cp src/pllj/pg/array.lua $(LUA_DIR)/pllj/pg/array.lua

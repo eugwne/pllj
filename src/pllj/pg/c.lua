@@ -50,6 +50,12 @@ typedef struct
 	int			lbound1;
 	Oid			values[/*FLEXIBLE_ARRAY_MEMBER*/];
 } oidvector;
+
+struct varlena
+{
+	char		vl_len_[4];		/* Do not touch this field directly! */
+	char		vl_dat[/*FLEXIBLE_ARRAY_MEMBER*/];	/* Data content is here */
+};
 ]]
 local NULL = ffi.new("void*")
 

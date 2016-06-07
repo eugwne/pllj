@@ -29,6 +29,7 @@ typedef struct FormData_pg_proc{
 } FormData_pg_proc;
 typedef FormData_pg_proc *Form_pg_proc;
 struct pg_proc_def {
+      static const int Anum_pg_proc_proargnames	= 22;
 	    static const int Anum_pg_proc_prosrc = 25;
 	};
 ]]
