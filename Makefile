@@ -35,3 +35,5 @@ install-module:
 	cp src/pllj/pg/pg_proc.lua $(LUA_DIR)/pllj/pg/pg_proc.lua
 	cp src/pllj/pg/c.lua $(LUA_DIR)/pllj/pg/c.lua
 	cp src/pllj/pg/array.lua $(LUA_DIR)/pllj/pg/array.lua
+	cp src/pllj/pg/itemptr.lua $(LUA_DIR)/pllj/pg/itemptr.lua 
+	cp src/pllj/io.lua $(LUA_DIR)/pllj/io.lua 

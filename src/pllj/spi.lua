@@ -21,6 +21,7 @@ uint32_t SPI_processed;
 ]]
 
 --[[#define NAMEDATALEN 64]]
+require('pllj.pg.itemptr')
 ffi.cdef[[
 
 
@@ -49,19 +50,7 @@ typedef struct tupleDesc
 
 /*----------------------------*/
 
-typedef struct BlockIdData
-{
-	uint16_t		bi_hi;
-	uint16_t		bi_lo;
-} BlockIdData;
 
-typedef uint16_t OffsetNumber;
-
-typedef struct ItemPointerData
-{
-	BlockIdData ip_blkid;
-	OffsetNumber ip_posid;
-} ItemPointerData;
 
 typedef struct HeapTupleHeaderData HeapTupleHeaderData;
 
@@ -167,14 +156,9 @@ Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bo
 
 ]]
 
-local pg_type = require('pllj.pg.pg_type')
 local syscache = require('pllj.pg.syscache')
-local builtins = require('pllj.pg.builtins')
 
-local typeto = {
-  [pg_type["TEXTOID"]] = builtins.pg_text_tolua 
-}
-
+local typeto = require('pllj.io').typeto
 
 local function datum_to_value(datum, atttypid)
 

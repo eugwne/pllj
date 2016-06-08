@@ -168,8 +168,13 @@ Datum _PG_init(PG_FUNCTION_ARGS) {
 	lua_getglobal(L, "require");
 	lua_pushstring(L, "pllj");
 	status = lua_pcall(L, 1, 1, 0);
-	if (status)
-		return 1;
+	if( status == LUA_ERRRUN) {
+		luapg_error(L);
+	} else if (status == LUA_ERRMEM) {
+		pg_throw("%s %s","Memory error:",lua_tostring(L, -1));
+	} else if (status == LUA_ERRERR) {
+		pg_throw("%s %s","Error:",lua_tostring(L, -1));
+	}
 	lua_getfield(L, 1, "inlinehandler");
 	inline_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_getfield(L, 1, "callhandler");
