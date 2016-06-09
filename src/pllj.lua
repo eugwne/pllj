@@ -2,7 +2,7 @@ local pllj = {}
 
 local function_cache = {}
 
-require('pllj.pg.c')
+local NULL = require('pllj.pg.c').NULL
 
 local pgdef = require('pllj.pgdefines')
 
@@ -15,6 +15,9 @@ extern bool errstart(int elevel, const char *filename, int lineno,
 		 const char *funcname, const char *domain);
 extern void errfinish(int dummy,...);
 int	errmsg(const char *fmt,...);
+]]
+ffi.cdef[[
+void set_pllj_call_result(Datum result);
 ]]
 local C = ffi.C;
 
@@ -36,18 +39,18 @@ end
 local builtins = require('pllj.pg.builtins')
 local pg_proc = require('pllj.pg.pg_proc')
 
-local function get_pg_typeinfo(oid)
-  local t = C.SearchSysCache(syscache.enum.TYPEOID, --[[ObjectIdGetDatum]](oid), 0, 0, 0);
-  local tstruct = ffi.cast('Form_pg_type', macro_GETSTRUCT(t));
-  print("-----tstruct------")
-  print(tstruct.typlen)
-  print(tstruct.typtype)
-  print(tstruct.typalign)
-  print(tstruct.typbyval)
-  print(tstruct.typelem)
-  print("------------------")
-  C.ReleaseSysCache(t)
-end
+--local function get_pg_typeinfo(oid)
+--  local t = C.SearchSysCache(syscache.enum.TYPEOID, --[[ObjectIdGetDatum]](oid), 0, 0, 0);
+--  local tstruct = ffi.cast('Form_pg_type', macro_GETSTRUCT(t));
+--  print("-----tstruct------")
+--  print(tstruct.typlen)
+--  print(tstruct.typtype)
+--  print(tstruct.typalign)
+--  print(tstruct.typbyval)
+--  print(tstruct.typelem)
+--  print("------------------")
+--  C.ReleaseSysCache(t)
+--end
 
 local function macro_PG_DETOAST_DATUM(datum)
   return C.pg_detoast_datum(ffi.cast('struct varlena*', ffi.cast('Pointer', datum)))
@@ -100,8 +103,7 @@ local function get_func_from_oid(oid)
       local argname = ffi.new 'Datum *[1]'
       C.deconstruct_array(macro_DatumGetArrayTypeP(argnames), pg_type["TEXTOID"], -1, false,
         string.byte('i'), argname, nil, nnames)
-      print(argname)
-      print(nnames[0])
+
       vararg = (nargs ~= nnames[0]) 
       local targ = {}
       local ttypes = {}
@@ -139,11 +141,11 @@ local function get_func_from_oid(oid)
     prosrc, '\nend\nreturn ',proname}
 
   fntext = table.concat(fntext)
-  
-  
+
+
   local xmin = macro_HeapTupleHeaderGetXmin(proc)
   C.ReleaseSysCache(proc)
-  
+
   local fn = assert(loadstring(fntext))
 
   return {func = fn(), xmin = xmin, result_isset = result_isset, result_type = rettype, argtypes = targtypes }
@@ -155,21 +157,22 @@ end
 
 
 local typeto = require('pllj.io').typeto
+local datumfor = require('pllj.io').datumfor
 
 function pllj.callhandler (fcinfo)
   fcinfo = ffi.cast('FunctionCallInfo',fcinfo)
   local fn_oid = fcinfo.flinfo.fn_oid
   local func_struct = function_cache[fn_oid]
 
-  if not func then
+  if not func_struct then
     func_struct = get_func_from_oid(fn_oid)
     function_cache[fn_oid] = func_struct
   end
   --[[istrigger = CALLED_AS_TRIGGER(fcinfo)]]
-    local args = {}
+  local args = {}
   for i = 0, fcinfo.nargs-1 do
     if fcinfo.argnull[i] == true then
-      table.insert(args)
+      table.insert(args, NULL)
     else 
       local typeoid = func_struct.argtypes[i+1]
       local iof = typeto[typeoid]
@@ -177,14 +180,24 @@ function pllj.callhandler (fcinfo)
       if not iof then
         error('not conversion for type '..typeoid)
       end
-      print(iof(fcinfo.arg[i]))
-
+      table.insert(args, iof(fcinfo.arg[i]))
     end
 
   end
-  
+  local result = func_struct.func(unpack(args))
+  local iof = datumfor[func_struct.result_type]
 
+  if not iof then
+    error('not conversion for type '..typeoid)
+  end
+  if result == nil or result == NULL then
+    fcinfo.isnull = true
+    return
+  end
+
+  C.set_pllj_call_result(iof(result))
   spi.disconnect()
+
 end
 
 function pllj.inlinehandler (...)

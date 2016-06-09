@@ -96,15 +96,23 @@ static Datum lj_validator (Oid oid) {
 	PG_RETURN_VOID();
 }
 
+static volatile Datum call_result;
+extern void set_pllj_call_result(Datum result);
+void set_pllj_call_result(Datum result){
+	call_result = result;
+}
+
 static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 	int status = 0;
+	call_result = (Datum) 0;
 	lua_settop(L, 0);
 	lua_rawgeti(L, LUA_REGISTRYINDEX, call_ref);
 	lua_pushlightuserdata(L, (void *)fcinfo);
 	status = lua_pcall(L, 1, 0, 0);
 
 	if (status == 0){
-		PG_RETURN_VOID();
+		//PG_RETURN_VOID();
+		return call_result;
 	}
 
 	if( status == LUA_ERRRUN) {

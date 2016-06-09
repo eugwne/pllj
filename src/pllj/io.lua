@@ -6,4 +6,8 @@ local typeto = {
   [pg_type["TEXTOID"]] = builtins.pg_text_tolua 
 }
 
-return {typeto = typeto}
+local datumfor = {
+  [pg_type["INT4OID"]] = builtins.lua_int4pg,
+}
+
+return {typeto = typeto, datumfor = datumfor}

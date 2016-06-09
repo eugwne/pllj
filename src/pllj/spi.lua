@@ -4,6 +4,8 @@ require('pllj.pg.palloc')
 
 local ffi = require('ffi')
 
+local C = ffi.C;
+
 local NULL = require('pllj.pg.c').NULL
 
 local spi_connected = false;
@@ -86,7 +88,7 @@ void SPI_freetuptable(SPITupleTable *tuptable);
 
 local function connect()
   if (spi_connected == false) then
-    if (ffi.C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
+    if (C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
       throw("SPI_connect error")
     end
     spi_connected = true
@@ -168,23 +170,23 @@ local function datum_to_value(datum, atttypid)
   end
   return datum --TODO other types
   --print("SC = "..tonumber(syscache.enum.TYPEOID))
-  --type = ffi.C.SearchSysCache(syscache.enum.TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
+  --type = C.SearchSysCache(syscache.enum.TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
 end
 
 function spi.execute(query)
   connect()
   local result = -1
   --try
-  result = ffi.C.SPI_execute(query, 0, 0)
+  result = C.SPI_execute(query, 0, 0)
   --catch
   if (result < 0) then
     return throw("SPI_execute_plan error:"..tostring(query))
   end
-  if ((result == pgdef.spi["SPI_OK_SELECT"]) and (ffi.C.SPI_processed > 0)) then
-    --[[TupleDesc]] tupleDesc = ffi.C.SPI_tuptable.tupdesc
+  if ((result == pgdef.spi["SPI_OK_SELECT"]) and (C.SPI_processed > 0)) then
+    --[[TupleDesc]] tupleDesc = C.SPI_tuptable.tupdesc
     local rows = {}
-    for i = 0, ffi.C.SPI_processed-1 do
-      --[[HeapTuplelocal]] tuple = ffi.C.SPI_tuptable.vals[i]
+    for i = 0, C.SPI_processed-1 do
+      --[[HeapTuplelocal]] tuple = C.SPI_tuptable.vals[i]
 
       local natts = tupleDesc.natts
       local row = {}
@@ -195,9 +197,9 @@ function spi.execute(query)
         local atttypid = tupleDesc.attrs[k].atttypid;
 
         local isNull = ffi.new("bool[?]", 1)
-        --local val = ffi.C.SPI_getbinval(tuple, tupleDesc, k, isNull)
+        --local val = C.SPI_getbinval(tuple, tupleDesc, k, isNull)
 
-        local val = ffi.C.pllj_heap_getattr(tuple, attnum, tupleDesc,  isNull)
+        local val = C.pllj_heap_getattr(tuple, attnum, tupleDesc,  isNull)
         val = datum_to_value(val, atttypid) 
 
         row[k+1] = isNull[0] == false and val or NULL
@@ -207,7 +209,7 @@ function spi.execute(query)
 
     end
 
-    ffi.C.SPI_freetuptable(SPI_tuptable);
+    C.SPI_freetuptable(SPI_tuptable);
     return rows
 
   else
@@ -219,7 +221,7 @@ end
 
 function spi.disconnect()
   if spi_connected then
-    ffi.C.SPI_finish()
+    C.SPI_finish()
     spi_connected = false
   end
 end

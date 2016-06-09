@@ -26,3 +26,12 @@ end
 result = spi.execute("select 'test'::text ")
 print(result[1][1])
 $$ language pllj;
+CREATE OR REPLACE FUNCTION pg_temp.echo(val integer)
+  RETURNS integer AS
+$$
+if val < 3 then
+	return nil
+end
+return val * 2
+$$  LANGUAGE pllj;
+select g, quote_nullable(pg_temp.echo(g)) from generate_series(1,5) as g;
