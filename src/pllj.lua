@@ -190,7 +190,7 @@ function pllj.callhandler (fcinfo)
   if not iof then
     error('not conversion for type '..typeoid)
   end
-  if result == nil or result == NULL then
+  if not result --[[or result == NULL]] then
     fcinfo.isnull = true
     return
   end
