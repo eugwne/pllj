@@ -33,7 +33,7 @@ before_script:
 
 env:
   matrix:
-    - PGVERSION=9.5 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.0 LUALIB=-lluajit-5.1
+    - PGVERSION=9.5 LUA=luajit2.1 LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
 
 
 language: c
