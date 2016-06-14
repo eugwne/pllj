@@ -9,6 +9,8 @@ local pgdef = require('pllj.pgdefines')
 pllj._DESCRIPTION = "LuaJIT FFI postgres language extension"
 pllj._VERSION     = "pllj 0.1"
 
+local band = require("bit").band
+
 local ffi = require('ffi')
 ffi.cdef[[
 extern bool errstart(int elevel, const char *filename, int lineno,
@@ -56,25 +58,52 @@ local function macro_PG_DETOAST_DATUM(datum)
   return C.pg_detoast_datum(ffi.cast('struct varlena*', ffi.cast('Pointer', datum)))
 end
 
+local function macro_SET_4_BYTES(X)
+  --(((Datum) (value)) & 0xffffffff)
+  return (band(ffi.cast('Datum', X), 0xffffffff))
+end
+
+
+local function macro_ObjectIdGetDatum(X)
+  return ffi.cast('Datum', macro_SET_4_BYTES(X))
+end
 
 local function macro_DatumGetArrayTypeP(X)
-  return ffi.cast('ArrayType *',macro_PG_DETOAST_DATUM(X))
+  return ffi.cast('ArrayType *', macro_PG_DETOAST_DATUM(X))
+end
+
+local HEAP_XMIN_COMMITTED	=	0x0100	--/* t_xmin committed */
+local HEAP_XMIN_INVALID	=	0x0200	--/* t_xmin invalid/aborted */
+local HEAP_XMIN_FROZEN = band(HEAP_XMIN_COMMITTED,HEAP_XMIN_INVALID)
+
+local function macro_HeapTupleHeaderGetRawXmin(tup)
+  return tup.t_choice.t_heap.t_xmin
 end
 
 local function macro_HeapTupleHeaderXminFrozen(tup)
-  return nil
+  --((tup)->t_infomask & (HEAP_XMIN_FROZEN)) == HEAP_XMIN_FROZEN 
+  return (band(tup.t_infomask ,HEAP_XMIN_FROZEN) == HEAP_XMIN_FROZEN )
 end
 
+local TransactionId = ffi.typeof('TransactionId')
+local FrozenTransactionId = ffi.cast(TransactionId, 2)
 local function macro_HeapTupleHeaderGetXmin(tup)
-  return nil
+  if macro_HeapTupleHeaderXminFrozen(tup) then
+    return FrozenTransactionId
+  end
+  
+  return macro_HeapTupleHeaderGetRawXmin(tup)
 end
 
 local pg_type = require('pllj.pg.pg_type')
 require('pllj.pg.array')
 
+ffi.cdef[[
+Oid	GetUserId(void);
+]]
 local function get_func_from_oid(oid)
   local isNull = ffi.new("bool[?]", 1)
-  local proc = C.SearchSysCache(syscache.enum.PROCOID, --[[ObjectIdGetDatum]](oid), 0, 0, 0);
+  local proc = C.SearchSysCache(syscache.enum.PROCOID, macro_ObjectIdGetDatum(oid), 0, 0, 0);
 
   local procst = ffi.cast('Form_pg_proc', macro_GETSTRUCT(proc));
 
@@ -143,12 +172,24 @@ local function get_func_from_oid(oid)
   fntext = table.concat(fntext)
 
 
-  local xmin = macro_HeapTupleHeaderGetXmin(proc)
+  local xmin = macro_HeapTupleHeaderGetXmin(proc.t_data)
+  local tid = proc.t_self;
+  local user_id = C.GetUserId()
+
   C.ReleaseSysCache(proc)
 
   local fn = assert(loadstring(fntext))
 
-  return {func = fn(), xmin = xmin, result_isset = result_isset, result_type = rettype, argtypes = targtypes }
+  return {
+    func = fn(), 
+    xmin = xmin, 
+    tid,
+    user_id,
+    result_isset = result_isset, 
+    result_type = rettype, 
+    argtypes = targtypes 
+  }
+  
 end
 
 function pllj.validator (...)
@@ -158,9 +199,10 @@ end
 
 local typeto = require('pllj.io').typeto
 local datumfor = require('pllj.io').datumfor
+local FunctionCallInfo = ffi.typeof('FunctionCallInfo')
 
 function pllj.callhandler (fcinfo)
-  fcinfo = ffi.cast('FunctionCallInfo',fcinfo)
+  fcinfo = ffi.cast(FunctionCallInfo,fcinfo)
   local fn_oid = fcinfo.flinfo.fn_oid
   local func_struct = function_cache[fn_oid]
 
@@ -178,7 +220,7 @@ function pllj.callhandler (fcinfo)
       local iof = typeto[typeoid]
 
       if not iof then
-        error('not conversion for type '..typeoid)
+        error('no conversion for type '..typeoid)
       end
       table.insert(args, iof(fcinfo.arg[i]))
     end
@@ -188,7 +230,7 @@ function pllj.callhandler (fcinfo)
   local iof = datumfor[func_struct.result_type]
 
   if not iof then
-    error('not conversion for type '..typeoid)
+    error('no conversion for type '..tostring(func_struct.result_type))
   end
   if not result --[[or result == NULL]] then
     fcinfo.isnull = true

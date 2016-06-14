@@ -10,4 +10,19 @@ local datumfor = {
   [pg_type["INT4OID"]] = builtins.lua_int4pg,
 }
 
-return {typeto = typeto, datumfor = datumfor}
+local function datum_to_value(datum, atttypid)
+
+  local func = typeto[atttypid]
+  if (func) then
+    return func(datum)
+  end
+  return datum --TODO other types
+  --print("SC = "..tonumber(syscache.enum.TYPEOID))
+  --type = C.SearchSysCache(syscache.enum.TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
+end
+
+return {
+  typeto = typeto, 
+  datumfor = datumfor, 
+  datum_to_value = datum_to_value
+}

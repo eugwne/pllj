@@ -160,18 +160,7 @@ Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bo
 
 local syscache = require('pllj.pg.syscache')
 
-local typeto = require('pllj.io').typeto
-
-local function datum_to_value(datum, atttypid)
-
-  local func = typeto[atttypid]
-  if (func) then
-    return func(datum)
-  end
-  return datum --TODO other types
-  --print("SC = "..tonumber(syscache.enum.TYPEOID))
-  --type = C.SearchSysCache(syscache.enum.TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
-end
+local datum_to_value = require('pllj.io').datum_to_value
 
 function spi.execute(query)
   connect()
