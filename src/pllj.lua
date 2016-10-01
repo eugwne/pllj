@@ -202,6 +202,7 @@ local datumfor = require('pllj.io').datumfor
 local FunctionCallInfo = ffi.typeof('FunctionCallInfo')
 
 function pllj.callhandler (fcinfo)
+  spi.connect()
   fcinfo = ffi.cast(FunctionCallInfo,fcinfo)
   local fn_oid = fcinfo.flinfo.fn_oid
   local func_struct = function_cache[fn_oid]
@@ -243,6 +244,7 @@ function pllj.callhandler (fcinfo)
 end
 
 function pllj.inlinehandler (...)
+  spi.connect()
   local text = select(1, ...)
   local f, err = loadstring(text)
   if (f) then 

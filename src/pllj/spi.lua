@@ -19,7 +19,10 @@ ffi.cdef[[
 int	SPI_connect(void);
 int	SPI_finish(void);
 int	SPI_execute(const char *src, bool read_only, long tcount);
+void SPI_push(void);
+void SPI_pop(void);
 uint32_t SPI_processed;
+int call_depth;
 ]]
 
 --[[#define NAMEDATALEN 64]]
@@ -87,11 +90,16 @@ void SPI_freetuptable(SPITupleTable *tuptable);
 ]]
 
 local function connect()
+
+  
   if (spi_connected == false) then
     if (C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
-      throw("SPI_connect error")
+      error("SPI_connect error")
     end
     spi_connected = true
+  elseif  C.call_depth > 1 then
+    C.SPI_push()
+    return
   end
 
 end
@@ -169,7 +177,7 @@ function spi.execute(query)
   result = C.SPI_execute(query, 0, 0)
   --catch
   if (result < 0) then
-    return throw("SPI_execute_plan error:"..tostring(query))
+    return error("SPI_execute_plan error:"..tostring(query))
   end
   if ((result == pgdef.spi["SPI_OK_SELECT"]) and (C.SPI_processed > 0)) then
     --[[TupleDesc]] tupleDesc = C.SPI_tuptable.tupdesc
@@ -209,11 +217,18 @@ function spi.execute(query)
 end
 
 function spi.disconnect()
+
   if spi_connected then
+    if C.call_depth > 1 then
+      C.SPI_pop()
+      return
+    end
     C.SPI_finish()
     spi_connected = false
   end
 end
+
+spi.connect = connect
 
 
 return spi

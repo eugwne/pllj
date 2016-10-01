@@ -35,3 +35,15 @@ end
 return val * 2
 $$  LANGUAGE pllj;
 select g, quote_nullable(pg_temp.echo(g)) from generate_series(1,5) as g;
+
+CREATE OR REPLACE FUNCTION public.sum_values(a integer, b integer, c integer)
+  RETURNS integer AS
+$$ return a+b+c $$ language pllj;
+
+do $$
+local spi = require("pllj.spi")
+for i = 5,10 do
+local result = spi.execute(string.format ("select sum_values(%s,%s,%s)", i, i*2, i*3))
+print(result[1][1])
+end
+$$ language pllj;
