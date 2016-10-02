@@ -236,7 +236,7 @@ end
     spi.disconnect()
     error('no conversion for type '..tostring(func_struct.result_type))
   end
-  if not result --[[or result == NULL]] then
+  if not result or result == NULL then
     fcinfo.isnull = true
     return spi.disconnect()
   end

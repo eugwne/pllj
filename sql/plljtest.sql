@@ -64,3 +64,14 @@ end
 $BODY$ LANGUAGE pllj;
 
 select rec_spi(50);
+
+CREATE FUNCTION get_max(a integer, b integer) RETURNS integer AS $$
+  if a == nil then return b end
+  if b == nil then return a end
+  return a > b and a or b
+$$ LANGUAGE pllj;
+SELECT quote_nullable(get_max(1,2)), 
+quote_nullable(get_max(2,1)), 
+quote_nullable(get_max(2,null)), 
+quote_nullable(get_max(null, 2)), 
+quote_nullable(get_max(null, null));
