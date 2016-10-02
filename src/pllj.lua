@@ -187,7 +187,7 @@ local function get_func_from_oid(oid)
     user_id,
     result_isset = result_isset, 
     result_type = rettype, 
-    argtypes = targtypes 
+    argtypes = targtypes
   }
   
 end
@@ -221,21 +221,24 @@ function pllj.callhandler (fcinfo)
       local iof = typeto[typeoid]
 
       if not iof then
+        spi.disconnect()
         error('no conversion for type '..typeoid)
       end
       table.insert(args, iof(fcinfo.arg[i]))
     end
 
-  end
+end
+  -- TODO pcall
   local result = func_struct.func(unpack(args))
   local iof = datumfor[func_struct.result_type]
 
   if not iof then
+    spi.disconnect()
     error('no conversion for type '..tostring(func_struct.result_type))
   end
   if not result --[[or result == NULL]] then
     fcinfo.isnull = true
-    return
+    return spi.disconnect()
   end
 
   C.set_pllj_call_result(iof(result))

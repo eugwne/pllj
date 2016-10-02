@@ -8,17 +8,15 @@ local C = ffi.C;
 
 local NULL = require('pllj.pg.c').NULL
 
-local spi_connected = false;
-
 local pgdef = require('pllj.pgdefines')
 
-local NAMEDATALEN = pgdef.pg_config_manual["NAMEDATALEN"]
+--local NAMEDATALEN = pgdef.pg_config_manual["NAMEDATALEN"]
 
 
 ffi.cdef[[
 int	SPI_connect(void);
 int	SPI_finish(void);
-int	SPI_execute(const char *src, bool read_only, long tcount);
+int	lj_SPI_execute(const char *src, bool read_only, long tcount);
 void SPI_push(void);
 void SPI_pop(void);
 uint32_t SPI_processed;
@@ -90,16 +88,9 @@ void SPI_freetuptable(SPITupleTable *tuptable);
 ]]
 
 local function connect()
-
   
-  if (spi_connected == false) then
-    if (C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
-      error("SPI_connect error")
-    end
-    spi_connected = true
-  elseif  C.call_depth > 1 then
-    C.SPI_push()
-    return
+  if (C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
+    error("SPI_connect error")
   end
 
 end
@@ -166,30 +157,32 @@ Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bo
 
 ]]
 
-local syscache = require('pllj.pg.syscache')
+local pg_error = require('pllj.pg.pg_error')
 
 local datum_to_value = require('pllj.io').datum_to_value
 
 function spi.execute(query)
-  connect()
   local result = -1
   --try
-  result = C.SPI_execute(query, 0, 0)
+  result = C.lj_SPI_execute(query, 0, 0)
   --catch
   if (result < 0) then
+    if (result == pg_error.THROW_NUMBER) then
+      return error("SPI_execute_plan error:"..pg_error.get_exception_text())
+    end
     return error("SPI_execute_plan error:"..tostring(query))
   end
   if ((result == pgdef.spi["SPI_OK_SELECT"]) and (C.SPI_processed > 0)) then
-    --[[TupleDesc]] tupleDesc = C.SPI_tuptable.tupdesc
+    --[[TupleDesc]]local tupleDesc = C.SPI_tuptable.tupdesc
     local rows = {}
     for i = 0, C.SPI_processed-1 do
-      --[[HeapTuplelocal]] tuple = C.SPI_tuptable.vals[i]
+      --[[HeapTuplelocal]]local tuple = C.SPI_tuptable.vals[i]
 
       local natts = tupleDesc.natts
       local row = {}
       for k = 0, natts-1 do
-        local attname = tupleDesc.attrs[k].attname;
-        local columnName =  (ffi.string(attname, NAMEDATALEN))
+        --local attname = tupleDesc.attrs[k].attname;
+        --local columnName =  (ffi.string(attname, NAMEDATALEN))
         local attnum = tupleDesc.attrs[k].attnum;
         local atttypid = tupleDesc.attrs[k].atttypid;
 
@@ -206,7 +199,7 @@ function spi.execute(query)
 
     end
 
-    C.SPI_freetuptable(SPI_tuptable);
+    C.SPI_freetuptable(C.SPI_tuptable);
     return rows
 
   else
@@ -217,15 +210,7 @@ function spi.execute(query)
 end
 
 function spi.disconnect()
-
-  if spi_connected then
-    if C.call_depth > 1 then
-      C.SPI_pop()
-      return
-    end
     C.SPI_finish()
-    spi_connected = false
-  end
 end
 
 spi.connect = connect

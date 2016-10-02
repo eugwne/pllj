@@ -47,3 +47,20 @@ local result = spi.execute(string.format ("select sum_values(%s,%s,%s)", i, i*2,
 print(result[1][1])
 end
 $$ language pllj;
+
+CREATE OR REPLACE FUNCTION public.rec_spi(n integer)
+  RETURNS integer AS
+$BODY$
+local function call_spi(value)
+	local spi = require("pllj.spi")
+	local result = spi.execute(string.format ("select rec_spi(%s)", value))
+	return(result[1][1])
+end
+  if n < 2 then
+    return n
+  else
+    return call_spi(n - 1)+n
+  end
+$BODY$ LANGUAGE pllj;
+
+select rec_spi(50);
