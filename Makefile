@@ -26,7 +26,9 @@ install-module:
 	mkdir -p $(LUA_DIR)/pllj/pg
 	cp src/pllj.lua $(LUA_DIR)/pllj.lua
 	cp src/pllj/pgdefines.lua $(LUA_DIR)/pllj/pgdefines.lua
+	cp src/pllj/func.lua $(LUA_DIR)/pllj/func.lua
 	cp src/pllj/spi.lua $(LUA_DIR)/pllj/spi.lua
+	cp src/pllj/pg/macro.lua $(LUA_DIR)/pllj/pg/macro.lua
 	cp src/pllj/pg/pg_type.lua $(LUA_DIR)/pllj/pg/pg_type.lua
 	cp src/pllj/pg/pg_error.lua $(LUA_DIR)/pllj/pg/pg_error.lua
 	cp src/pllj/pg/syscache.lua $(LUA_DIR)/pllj/pg/syscache.lua

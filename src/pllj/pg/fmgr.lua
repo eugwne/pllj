@@ -1,5 +1,6 @@
 local fmgr = {}
 local ffi = require('ffi')
+require('pllj.pg.c')
 require('pllj.pg.palloc')
 --#define FUNC_MAX_ARGS		100
 ffi.cdef[[
