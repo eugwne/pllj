@@ -28,6 +28,7 @@ install-module:
 	cp src/pllj/pgdefines.lua $(LUA_DIR)/pllj/pgdefines.lua
 	cp src/pllj/spi.lua $(LUA_DIR)/pllj/spi.lua
 	cp src/pllj/pg/pg_type.lua $(LUA_DIR)/pllj/pg/pg_type.lua
+	cp src/pllj/pg/pg_error.lua $(LUA_DIR)/pllj/pg/pg_error.lua
 	cp src/pllj/pg/syscache.lua $(LUA_DIR)/pllj/pg/syscache.lua
 	cp src/pllj/pg/fmgr.lua $(LUA_DIR)/pllj/pg/fmgr.lua
 	cp src/pllj/pg/palloc.lua $(LUA_DIR)/pllj/pg/palloc.lua

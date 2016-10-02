@@ -64,3 +64,23 @@ INFO:  42
 INFO:  48
 INFO:  54
 INFO:  60
+CREATE OR REPLACE FUNCTION public.rec_spi(n integer)
+  RETURNS integer AS
+$BODY$
+local function get_fib(value)
+	local spi = require("pllj.spi")
+	local result = spi.execute(string.format ("select rec_spi(%s)", value))
+	return(result[1][1])
+end
+  if n < 2 then
+    return n
+  else
+    return rec_spi(n - 1)+n
+  end
+$BODY$ LANGUAGE pllj;
+select rec_spi(50);
+ rec_spi 
+---------
+    1275
+(1 row)
+

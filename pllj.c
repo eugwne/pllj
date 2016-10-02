@@ -22,42 +22,61 @@ PG_MODULE_MAGIC;
 #define pg_throw(...) ereport(ERROR, (errmsg(__VA_ARGS__)))
 
 #define luapg_error(L)do{\
-  if (lua_type(L, -1) == LUA_TSTRING){ \
-    const char *err = pstrdup( lua_tostring((L), -1)); \
-    lua_pop(L, lua_gettop(L));\
-    ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), \
-      errmsg("[pllj]: error"),\
-      errdetail("%s", err)));\
-  }else {\
+	if (lua_type(L, -1) == LUA_TSTRING){ \
+	const char *err = pstrdup( lua_tostring((L), -1)); \
+	lua_pop(L, lua_gettop(L));\
+	ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), \
+	errmsg("[pllj]: error"),\
+	errdetail("%s", err)));\
+	}else {\
 	luatable_report(L, ERROR);\
-  }\
-}while(0)
-
+	}\
+	}while(0)
 
 static void pllua_parse_error(lua_State *L, ErrorData *edata){
 	lua_pushnil(L);
 	while (lua_next(L, -2) != 0) {
-	if (lua_type(L, -2) == LUA_TSTRING){
-		const char *key = lua_tostring(L, -2);
-		if (lua_type(L, -1) == LUA_TSTRING){
-			if (strcmp(key, "message") == 0){
-				edata->message = pstrdup( lua_tostring(L, -1) );
-			} else if (strcmp(key, "detail") == 0){
-				edata->detail = pstrdup( lua_tostring(L, -1) );
-			}  else if (strcmp(key, "hint") == 0){
-				edata->hint = pstrdup( lua_tostring(L, -1) );
-			} else if (strcmp(key, "context") == 0){
-				edata->context = pstrdup( lua_tostring(L, -1) );
-			}
+		if (lua_type(L, -2) == LUA_TSTRING){
+			const char *key = lua_tostring(L, -2);
+			if (lua_type(L, -1) == LUA_TSTRING){
+				if (strcmp(key, "message") == 0){
+					edata->message = pstrdup( lua_tostring(L, -1) );
+				} else if (strcmp(key, "detail") == 0){
+					edata->detail = pstrdup( lua_tostring(L, -1) );
+				}  else if (strcmp(key, "hint") == 0){
+					edata->hint = pstrdup( lua_tostring(L, -1) );
+				} else if (strcmp(key, "context") == 0){
+					edata->context = pstrdup( lua_tostring(L, -1) );
+				}
 
-		}else if (lua_type(L, -1) == LUA_TNUMBER){
-			if (strcmp(key, "sqlerrcode") == 0){
-				edata->sqlerrcode = (int)( lua_tonumber(L, -1) );
+			}else if (lua_type(L, -1) == LUA_TNUMBER){
+				if (strcmp(key, "sqlerrcode") == 0){
+					edata->sqlerrcode = (int)( lua_tonumber(L, -1) );
+				}
 			}
 		}
+		lua_pop(L, 1);
 	}
-	lua_pop(L, 1);
-	}
+}
+
+extern ErrorData  *last_edata;
+ErrorData  *last_edata = NULL;
+#define THROW_NUMBER (-1000)
+
+extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
+int lj_SPI_execute(const char *src, bool read_only, long tcount) {
+	int result = 0;
+	MemoryContext oldcontext = CurrentMemoryContext;
+	PG_TRY();
+	{
+		result = SPI_execute(src, read_only, tcount);
+	}PG_CATCH();	{
+		MemoryContextSwitchTo(oldcontext);
+		last_edata = CopyErrorData();
+		FlushErrorState();
+		result = THROW_NUMBER;
+	}PG_END_TRY();
+	return result;
 }
 
 static void luatable_report(lua_State *L, int elevel)
@@ -92,7 +111,7 @@ static lua_State *L = NULL;
 static int call_ref = 0;
 static int inline_ref = 0;
 extern int call_depth;
- int call_depth = 0;
+int call_depth = 0;
 
 static Datum lj_validator (Oid oid) {
 	PG_RETURN_VOID();
@@ -115,8 +134,13 @@ static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 	lua_settop(L1, 0);
 	lua_rawgeti(L1, LUA_REGISTRYINDEX, call_ref);
 	lua_pushlightuserdata(L1, (void *)fcinfo);
-	status = lua_pcall(L1, 1, 0, 0);
-	--call_depth;
+	PG_TRY();{
+		status = lua_pcall(L1, 1, 0, 0);
+		--call_depth;
+	}PG_CATCH();{
+		--call_depth;
+		PG_RE_THROW();
+	}PG_END_TRY();
 
 	if (status == 0){
 		//PG_RETURN_VOID();
@@ -139,8 +163,13 @@ static Datum lj_inlinehandler (const char *source) {
 	lua_settop(L, 0);
 	lua_rawgeti(L, LUA_REGISTRYINDEX, inline_ref);
 	lua_pushstring(L, source);
-	status = lua_pcall(L, 1, 0, 0);
-	--call_depth;
+	PG_TRY();{
+		status = lua_pcall(L, 1, 0, 0);
+		--call_depth;
+	}PG_CATCH();{
+		--call_depth;
+		PG_RE_THROW();
+	}PG_END_TRY();
 
 	if (status == 0){
 		PG_RETURN_VOID();
