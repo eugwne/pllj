@@ -41,16 +41,22 @@ local spi = require('pllj.spi')
 --  C.ReleaseSysCache(t)
 --end
 
-local get_func_from_oid = require('pllj.func').get_func_from_oid
-
-function pllj.validator (...)
-
-end
+local pllj_func = require('pllj.func')
+local get_func_from_oid = pllj_func.get_func_from_oid
+local need_update = pllj_func.need_update
 
 
 local typeto = require('pllj.io').typeto
 local datumfor = require('pllj.io').datumfor
 local FunctionCallInfo = ffi.typeof('FunctionCallInfo')
+
+
+function pllj.validator (fn_oid)
+
+  function_cache[fn_oid] = get_func_from_oid(fn_oid)
+
+end
+
 
 function pllj.callhandler (fcinfo)
   spi.connect()
@@ -58,10 +64,12 @@ function pllj.callhandler (fcinfo)
   local fn_oid = fcinfo.flinfo.fn_oid
   local func_struct = function_cache[fn_oid]
 
-  if not func_struct then
+
+  if not func_struct  or need_update(func_struct) then
     func_struct = get_func_from_oid(fn_oid)
     function_cache[fn_oid] = func_struct
   end
+
   --[[istrigger = CALLED_AS_TRIGGER(fcinfo)]]
   local args = {}
   for i = 0, fcinfo.nargs-1 do

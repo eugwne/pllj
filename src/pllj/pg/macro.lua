@@ -23,6 +23,7 @@ local function SET_4_BYTES(X)
   return (band(ffi.cast('Datum', X), 0xffffffff))
 end
 
+
 local function ObjectIdGetDatum(X)
   return ffi.cast('Datum', SET_4_BYTES(X))
 end

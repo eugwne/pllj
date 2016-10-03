@@ -75,3 +75,13 @@ quote_nullable(get_max(2,1)),
 quote_nullable(get_max(2,null)), 
 quote_nullable(get_max(null, 2)), 
 quote_nullable(get_max(null, null));
+
+CREATE or replace FUNCTION pg_temp.get_temp_val() RETURNS integer AS $$
+  return 5
+$$ LANGUAGE pllj;
+SELECT pg_temp.get_temp_val();
+
+CREATE or replace FUNCTION pg_temp.get_temp_val() RETURNS integer AS $$
+  return 9
+$$ LANGUAGE pllj;
+SELECT pg_temp.get_temp_val();

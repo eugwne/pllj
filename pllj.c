@@ -110,11 +110,31 @@ static void luatable_report(lua_State *L, int elevel)
 static lua_State *L = NULL;
 static int call_ref = 0;
 static int inline_ref = 0;
+static int validator_ref = 0;
 extern int call_depth;
 int call_depth = 0;
 
 static Datum lj_validator (Oid oid) {
-	PG_RETURN_VOID();
+	int status = 0;
+	lua_State *L1 = L;
+	++call_depth;
+	if(call_depth > 1) {
+		L1 = lua_newthread(L);
+	}
+	lua_settop(L1, 0);
+	lua_rawgeti(L1, LUA_REGISTRYINDEX, validator_ref);
+	lua_pushnumber(L1, oid);
+	PG_TRY();{
+		status = lua_pcall(L1, 1, 0, 0);
+		--call_depth;
+	}PG_CATCH();{
+		--call_depth;
+		PG_RE_THROW();
+	}PG_END_TRY();
+
+	if (status == 0){
+		PG_RETURN_VOID();
+	}
 }
 
 static volatile Datum call_result;
@@ -226,6 +246,8 @@ Datum _PG_init(PG_FUNCTION_ARGS) {
 	inline_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_getfield(L, 1, "callhandler");
 	call_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
+	lua_getfield(L, 1, "validator");
+	validator_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_settop(L, 0);
 
 	PG_RETURN_VOID();

@@ -33,7 +33,7 @@ local function get_func_from_oid(oid)
 --  end
   local arguments = ''
   local targtypes = {}
-  local proname = 'anonymous'
+  local proname = ffi.string(procst.proname.data)--'anonymous'
   if nargs > 0 then
     local vararg = false
     local nnames = ffi.new("int[?]", 1)
@@ -60,7 +60,7 @@ local function get_func_from_oid(oid)
 
         end
       end
-      proname = ffi.string(procst.proname.data)
+      --proname = ffi.string(procst.proname.data)
 
       arguments = '...'
       if not vararg then
@@ -82,7 +82,7 @@ local function get_func_from_oid(oid)
 
   fntext = table.concat(fntext)
 
-  local xmin = macro.HeapTupleHeaderGetXmin(proc.t_data)
+  local xmin = tonumber(macro.HeapTupleHeaderGetXmin(proc.t_data))
   local tid = proc.t_self;
   local user_id = C.GetUserId()
 
@@ -93,15 +93,44 @@ local function get_func_from_oid(oid)
   return {
     func = fn(), 
     xmin = xmin, 
-    tid,
-    user_id,
+    tid = tid,
+    user_id = user_id,
     result_isset = result_isset, 
     result_type = rettype, 
-    argtypes = targtypes
+    argtypes = targtypes,
+    oid = oid,
+    __fntext = fntext
   }
   
 end
 
+local function need_update(cached)
+  if not cached then
+    return true
+  end
+  
+  local oid = cached.oid
+  local user_id = C.GetUserId()
+
+  if user_id ~= cached.user_id then
+    return true
+  end
+  
+  local proc = C.SearchSysCache(syscache.enum.PROCOID, macro.ObjectIdGetDatum(oid), 0, 0, 0)
+  local xmin = tonumber(macro.HeapTupleHeaderGetXmin(proc.t_data))
+  local tid = proc.t_self;
+
+  if xmin ~= cached.xmin or tid ~= cached.tid then
+    C.ReleaseSysCache(proc)
+    return true
+  end
+  
+  C.ReleaseSysCache(proc)
+  return false
+end
+
+
 return {
-  get_func_from_oid = get_func_from_oid
+  get_func_from_oid = get_func_from_oid,
+  need_update = need_update
   }
