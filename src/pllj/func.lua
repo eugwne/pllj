@@ -88,7 +88,12 @@ local function get_func_from_oid(oid)
 
   C.ReleaseSysCache(proc)
 
-  local fn = assert(loadstring(fntext))
+  local fn, err = loadstring(fntext)
+  
+  if not fn then
+    error({message = err, context = fntext} )
+  end
+  
 
   return {
     func = fn(), 
@@ -99,7 +104,7 @@ local function get_func_from_oid(oid)
     result_type = rettype, 
     argtypes = targtypes,
     oid = oid,
-    __fntext = fntext
+    --__fntext = fntext
   }
   
 end

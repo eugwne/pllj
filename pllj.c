@@ -135,6 +135,15 @@ static Datum lj_validator (Oid oid) {
 	if (status == 0){
 		PG_RETURN_VOID();
 	}
+	if( status == LUA_ERRRUN) {
+		luapg_error(L1);
+	} else if (status == LUA_ERRMEM) {
+		pg_throw("%s %s","Memory error:",lua_tostring(L1, -1));
+	} else if (status == LUA_ERRERR) {
+		pg_throw("%s %s","Error:",lua_tostring(L1, -1));
+	}
+
+	pg_throw("pllj unknown error");
 }
 
 static volatile Datum call_result;

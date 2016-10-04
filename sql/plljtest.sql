@@ -85,3 +85,9 @@ CREATE or replace FUNCTION pg_temp.get_temp_val() RETURNS integer AS $$
   return 9
 $$ LANGUAGE pllj;
 SELECT pg_temp.get_temp_val();
+
+CREATE OR REPLACE FUNCTION validation_error()
+  RETURNS integer AS
+$BODY$
+ret value
+$BODY$ LANGUAGE pllj;

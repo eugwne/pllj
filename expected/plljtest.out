@@ -117,3 +117,16 @@ SELECT pg_temp.get_temp_val();
             9
 (1 row)
 
+CREATE OR REPLACE FUNCTION validation_error()
+  RETURNS integer AS
+$BODY$
+ret value
+$BODY$ LANGUAGE pllj;
+ERROR:  [string "local validation_error..."]:4: '=' expected near 'value'
+CONTEXT:  local validation_error
+validation_error = function ()
+
+ret value
+
+end
+return validation_error
