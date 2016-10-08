@@ -3,7 +3,6 @@ local band = require("bit").band
 local ffi = require('ffi')
 local C = ffi.C
 
-require('pllj.pg.fmgr')
 
 local HEAP_XMIN_COMMITTED	=	0x0100	--/* t_xmin committed */
 local HEAP_XMIN_INVALID	=	0x0200	--/* t_xmin invalid/aborted */

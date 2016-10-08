@@ -7,11 +7,7 @@ local pg_proc = require('pllj.pg.pg_proc')
 local builtins = require('pllj.pg.builtins')
 
 local pg_type = require('pllj.pg.pg_type')
-require('pllj.pg.array')
 
-ffi.cdef[[
-Oid	GetUserId(void);
-]]
 local function get_func_from_oid(oid)
   local isNull = ffi.new("bool[?]", 1)
   local proc = C.SearchSysCache(syscache.enum.PROCOID, macro.ObjectIdGetDatum(oid), 0, 0, 0);

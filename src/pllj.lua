@@ -2,6 +2,11 @@ local pllj = {}
 
 local function_cache = {}
 
+local ffi = require('ffi')
+local all_types = require('pllj.pg.i').all_types
+ffi.cdef(all_types)
+
+
 local NULL = require('pllj.pg.c').NULL
 
 local pgdef = require('pllj.pgdefines')
@@ -9,13 +14,8 @@ local pgdef = require('pllj.pgdefines')
 pllj._DESCRIPTION = "LuaJIT FFI postgres language extension"
 pllj._VERSION     = "pllj 0.1"
 
-local ffi = require('ffi')
-ffi.cdef[[
-extern bool errstart(int elevel, const char *filename, int lineno,
-		 const char *funcname, const char *domain);
-extern void errfinish(int dummy,...);
-int	errmsg(const char *fmt,...);
-]]
+
+
 ffi.cdef[[
 void set_pllj_call_result(Datum result);
 ]]
@@ -48,7 +48,7 @@ local need_update = pllj_func.need_update
 
 local typeto = require('pllj.io').typeto
 local datumfor = require('pllj.io').datumfor
-local FunctionCallInfo = ffi.typeof('FunctionCallInfo')
+local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
 
 
 function pllj.validator (fn_oid)

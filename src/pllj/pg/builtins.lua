@@ -2,12 +2,6 @@ local ffi = require('ffi')
 
 local C = ffi.C;
 
-require('pllj.pg.fmgr')
-
-ffi.cdef[[
-Datum textout(FunctionCallInfo fcinfo);
-]]
-
 local function pg_text_tolua(datum) 
   local d = C.DirectFunctionCall1Coll(C.textout, 0, datum)
   return ffi.string(ffi.cast('Pointer', d))
