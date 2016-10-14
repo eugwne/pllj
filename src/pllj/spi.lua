@@ -1,7 +1,5 @@
 local spi = {}
 
-require('pllj.pg.palloc')
-
 local ffi = require('ffi')
 
 local C = ffi.C;
@@ -10,81 +8,10 @@ local NULL = require('pllj.pg.c').NULL
 
 local pgdef = require('pllj.pgdefines')
 
---local NAMEDATALEN = pgdef.pg_config_manual["NAMEDATALEN"]
-
-
 ffi.cdef[[
-int	SPI_connect(void);
-int	SPI_finish(void);
 int	lj_SPI_execute(const char *src, bool read_only, long tcount);
-void SPI_push(void);
-void SPI_pop(void);
-uint32_t SPI_processed;
 int call_depth;
-]]
-
---[[#define NAMEDATALEN 64]]
-require('pllj.pg.itemptr')
-ffi.cdef[[
-
-
-typedef struct Form_pg_attribute_data{
-	Oid			attrelid;		/* OID of relation containing this attribute */
-	NameData	attname;		/* name of attribute */
-
-	Oid			atttypid;
-	int32		attstattarget;
-	int16		attlen;
-	int16		attnum;
- 
-} Form_pg_attribute_data, *Form_pg_attribute;
-
-typedef struct tupleDesc
-{
-	int			natts;			/* number of attributes in the tuple */
-	Form_pg_attribute *attrs;
-	/* attrs[N] is a pointer to the description of Attribute Number N+1 */
-	/*TupleConstr*/ void *constr;		/* constraints, or NULL if none */
-	Oid			tdtypeid;		/* composite type ID for tuple type */
-	int32_t		tdtypmod;		/* typmod for tuple type */
-	bool		tdhasoid;		/* tuple has oid attribute in its header */
-	int			tdrefcount;		/* reference count, or -1 if not counting */
-}	s_tupleDesc, *TupleDesc;
-
-/*----------------------------*/
-
-
-
-typedef struct HeapTupleHeaderData HeapTupleHeaderData;
-
-typedef HeapTupleHeaderData *HeapTupleHeader;
-
-typedef struct HeapTupleData
-{
-	uint32_t		t_len;			/* length of *t_data */
-	ItemPointerData t_self;	/* SelfItemPointer */
-  Oid			t_tableOid;		  /* table the tuple came from */
-  HeapTupleHeader t_data;	/* -> tuple header and data */
-} HeapTupleData;
-
-typedef HeapTupleData *HeapTuple;
-
-typedef uint32_t SubTransactionId;
-
-typedef struct SPITupleTable
-{
-	MemoryContext tuptabcxt;	/* memory context of result table */
-	uint32_t		alloced;		/* # of alloced vals */
-	uint32_t		free;			/* # of free vals */
-	TupleDesc	tupdesc;		/* tuple descriptor */
-	HeapTuple  *vals;			/* tuples */
-	void*	next;			/* link for internal bookkeeping */
-	SubTransactionId subid;		/* subxact in which tuptable was created */
-} SPITupleTable;
-
-SPITupleTable *SPI_tuptable;
-
-void SPI_freetuptable(SPITupleTable *tuptable);
+Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
 ]]
 
 local function connect()
@@ -95,67 +22,6 @@ local function connect()
 
 end
 
-ffi.cdef[[
-typedef struct HeapTupleFields
-{
-	TransactionId t_xmin;		/* inserting xact ID */
-	TransactionId t_xmax;		/* deleting or locking xact ID */
-
-	union
-	{
-		CommandId	t_cid;		/* inserting or deleting command ID, or both */
-		TransactionId t_xvac;	/* old-style VACUUM FULL xact ID */
-	}			t_field3;
-} HeapTupleFields;
-
-typedef struct DatumTupleFields
-{
-	int32		datum_len_;		/* varlena header (do not touch directly!) */
-
-	int32		datum_typmod;	/* -1, or identifier of a record type */
-
-	Oid			datum_typeid;	/* composite type OID, or RECORDOID */
-
-	/*
-	 * Note: field ordering is chosen with thought that Oid might someday
-	 * widen to 64 bits.
-	 */
-} DatumTupleFields;
-
-typedef struct HeapTupleHeaderData
-{
-	union
-	{
-		HeapTupleFields t_heap;
-		DatumTupleFields t_datum;
-	}			t_choice;
-  
-  ItemPointerData t_ctid;		/* current TID of this or newer tuple (or a
-								 * speculative insertion token) */
-
-	/* Fields below here must match MinimalTupleData! */
-
-	uint16		t_infomask2;	/* number of attributes + various flags */
-
-	uint16		t_infomask;		/* various flag bits, see below */
-
-	uint8		t_hoff;			/* sizeof header incl. bitmap, padding */
-
-	/* ^ - 23 bytes - ^ */
-
-	bits8		t_bits[/*FLEXIBLE_ARRAY_MEMBER*/];	/* bitmap of NULLs */
-  
-} HeapTupleHeaderData;
-
-//typedef struct HeapTupleHeaderData HeapTupleHeaderData;
-typedef HeapTupleHeaderData *HeapTupleHeader;
-typedef int16_t AttrNumber;
-
-Datum SPI_getbinval(HeapTuple row, TupleDesc rowdesc, int colnumber,
-                    bool * isnull); /* del ? */
-Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
-
-]]
 
 local pg_error = require('pllj.pg.pg_error')
 
@@ -175,7 +41,8 @@ function spi.execute(query)
   if ((result == pgdef.spi["SPI_OK_SELECT"]) and (C.SPI_processed > 0)) then
     --[[TupleDesc]]local tupleDesc = C.SPI_tuptable.tupdesc
     local rows = {}
-    for i = 0, C.SPI_processed-1 do
+    local spi_processed = tonumber(C.SPI_processed)
+    for i = 0, spi_processed-1 do
       --[[HeapTuplelocal]]local tuple = C.SPI_tuptable.vals[i]
 
       local natts = tupleDesc.natts

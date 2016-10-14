@@ -16,21 +16,48 @@ before_install:
   - sudo add-apt-repository ppa:neomantra/luajit-v2.1 -y && sudo apt-get update -y;
   - sudo apt-get install $LUA
   - sudo apt-get install $LUA_DEV
-
-
+  - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
+  - gcc --version
+  - sudo apt-get install gcc-5-plugin-dev
+  - git clone https://github.com/eugwne/gcc-lua.git
+  - cd gcc-lua
+  - make && sudo make install
+  - cd ../
+  - git clone https://github.com/eugwne/gcc-lua-cdecl.git
+  - cd gcc-lua-cdecl
+  - sudo make install 
+  - cd ../
+  - cd gen
+  - gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua -I /usr/include/postgresql/$PGVERSION/server 
+  - gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua -I /usr/include/postgresql/$PGVERSION/server > ../src/pllj/pg/i.lua 
+  - cd ../
+  
 before_script:
   - createuser -U postgres -s travis
-
 
 env:
   matrix:
     - PGVERSION=9.5 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
+    - PGVERSION=9.6 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
 
 
 language: c
 compiler:
   - gcc
 
+sudo: required
+
+notifications:
+  email: false
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-5
+    - g++-5
+    
 script:
   - make && sudo make install && sudo make install-module && make installcheck
 

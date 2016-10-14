@@ -110,11 +110,40 @@ static void luatable_report(lua_State *L, int elevel)
 static lua_State *L = NULL;
 static int call_ref = 0;
 static int inline_ref = 0;
+static int validator_ref = 0;
 extern int call_depth;
 int call_depth = 0;
 
 static Datum lj_validator (Oid oid) {
-	PG_RETURN_VOID();
+	int status = 0;
+	lua_State *L1 = L;
+	++call_depth;
+	if(call_depth > 1) {
+		L1 = lua_newthread(L);
+	}
+	lua_settop(L1, 0);
+	lua_rawgeti(L1, LUA_REGISTRYINDEX, validator_ref);
+	lua_pushnumber(L1, oid);
+	PG_TRY();{
+		status = lua_pcall(L1, 1, 0, 0);
+		--call_depth;
+	}PG_CATCH();{
+		--call_depth;
+		PG_RE_THROW();
+	}PG_END_TRY();
+
+	if (status == 0){
+		PG_RETURN_VOID();
+	}
+	if( status == LUA_ERRRUN) {
+		luapg_error(L1);
+	} else if (status == LUA_ERRMEM) {
+		pg_throw("%s %s","Memory error:",lua_tostring(L1, -1));
+	} else if (status == LUA_ERRERR) {
+		pg_throw("%s %s","Error:",lua_tostring(L1, -1));
+	}
+
+	pg_throw("pllj unknown error");
 }
 
 static volatile Datum call_result;
@@ -123,21 +152,63 @@ void set_pllj_call_result(Datum result){
 	call_result = result;
 }
 
+static lua_State *get_temp_state(){
+	int status;
+	lua_State *LT;
+
+	LT = lua_open();
+
+	LUAJIT_VERSION_SYM();
+	lua_gc(LT, LUA_GCSTOP, 0);
+	luaL_openlibs(LT);
+	lua_gc(LT, LUA_GCRESTART, -1);
+
+	lua_getglobal(LT, "require");
+	lua_pushstring(LT, "pllj");
+	status = lua_pcall(LT, 1, 1, 0);
+	if( status == LUA_ERRRUN) {
+		luapg_error(LT);
+	} else if (status == LUA_ERRMEM) {
+		pg_throw("%s %s","Memory error:",lua_tostring(LT, -1));
+	} else if (status == LUA_ERRERR) {
+		pg_throw("%s %s","Error:",lua_tostring(LT, -1));
+	}
+	lua_getfield(LT, 1, "inlinehandler");
+	luaL_ref(LT, LUA_REGISTRYINDEX);
+	lua_getfield(LT, 1, "callhandler");
+	luaL_ref(LT, LUA_REGISTRYINDEX);
+	lua_getfield(LT, 1, "validator");
+	luaL_ref(LT, LUA_REGISTRYINDEX);
+	lua_settop(LT, 0);
+	return LT;
+}
+
+
 static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 	int status = 0;
+	char	*error_text = NULL;
 	lua_State *L1 = L;
 	++call_depth;
 	call_result = (Datum) 0;
 	if(call_depth > 1) {
-		L1 = lua_newthread(L);
+		L1 = get_temp_state();//lua_newthread(L);
 	}
 	lua_settop(L1, 0);
 	lua_rawgeti(L1, LUA_REGISTRYINDEX, call_ref);
 	lua_pushlightuserdata(L1, (void *)fcinfo);
 	PG_TRY();{
 		status = lua_pcall(L1, 1, 0, 0);
+		if (status == LUA_ERRMEM || status == LUA_ERRERR) {
+			error_text = pstrdup(lua_tostring(L1, -1));
+		}
+		if(call_depth > 1) {
+			lua_close(L1);
+		}
 		--call_depth;
 	}PG_CATCH();{
+		if(call_depth > 1) {
+			lua_close(L1);
+		}
 		--call_depth;
 		PG_RE_THROW();
 	}PG_END_TRY();
@@ -148,11 +219,11 @@ static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 	}
 
 	if( status == LUA_ERRRUN) {
-		luapg_error(L1);
+		pg_throw("FIXME! error not converted");//luapg_error(L1);
 	} else if (status == LUA_ERRMEM) {
-		pg_throw("%s %s","Memory error:",lua_tostring(L1, -1));
+		pg_throw("%s %s","Memory error:",error_text);
 	} else if (status == LUA_ERRERR) {
-		pg_throw("%s %s","Error:",lua_tostring(L1, -1));
+		pg_throw("%s %s","Error:",error_text);
 	}
 
 	pg_throw("pllj unknown error");
@@ -226,6 +297,8 @@ Datum _PG_init(PG_FUNCTION_ARGS) {
 	inline_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_getfield(L, 1, "callhandler");
 	call_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
+	lua_getfield(L, 1, "validator");
+	validator_ref  = luaL_ref(L, LUA_REGISTRYINDEX);
 	lua_settop(L, 0);
 
 	PG_RETURN_VOID();

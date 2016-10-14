@@ -2,6 +2,11 @@ local pllj = {}
 
 local function_cache = {}
 
+local ffi = require('ffi')
+local all_types = require('pllj.pg.i').all_types
+ffi.cdef(all_types)
+
+
 local NULL = require('pllj.pg.c').NULL
 
 local pgdef = require('pllj.pgdefines')
@@ -9,13 +14,8 @@ local pgdef = require('pllj.pgdefines')
 pllj._DESCRIPTION = "LuaJIT FFI postgres language extension"
 pllj._VERSION     = "pllj 0.1"
 
-local ffi = require('ffi')
-ffi.cdef[[
-extern bool errstart(int elevel, const char *filename, int lineno,
-		 const char *funcname, const char *domain);
-extern void errfinish(int dummy,...);
-int	errmsg(const char *fmt,...);
-]]
+
+
 ffi.cdef[[
 void set_pllj_call_result(Datum result);
 ]]
@@ -41,16 +41,22 @@ local spi = require('pllj.spi')
 --  C.ReleaseSysCache(t)
 --end
 
-local get_func_from_oid = require('pllj.func').get_func_from_oid
-
-function pllj.validator (...)
-
-end
+local pllj_func = require('pllj.func')
+local get_func_from_oid = pllj_func.get_func_from_oid
+local need_update = pllj_func.need_update
 
 
 local typeto = require('pllj.io').typeto
 local datumfor = require('pllj.io').datumfor
-local FunctionCallInfo = ffi.typeof('FunctionCallInfo')
+local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
+
+
+function pllj.validator (fn_oid)
+
+  function_cache[fn_oid] = get_func_from_oid(fn_oid)
+
+end
+
 
 function pllj.callhandler (fcinfo)
   spi.connect()
@@ -58,10 +64,12 @@ function pllj.callhandler (fcinfo)
   local fn_oid = fcinfo.flinfo.fn_oid
   local func_struct = function_cache[fn_oid]
 
-  if not func_struct then
+
+  if not func_struct  or need_update(func_struct) then
     func_struct = get_func_from_oid(fn_oid)
     function_cache[fn_oid] = func_struct
   end
+
   --[[istrigger = CALLED_AS_TRIGGER(fcinfo)]]
   local args = {}
   for i = 0, fcinfo.nargs-1 do
