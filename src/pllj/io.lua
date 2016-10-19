@@ -1,14 +1,17 @@
-local builtins = require('pllj.pg.builtins')
+local _ = require('pllj.pg.builtins')
 local pg_type = require('pllj.pg.pg_type')
 
-local typeto = {
-  [pg_type["INT4OID"]] = builtins.pg_int_tolua,
-  [pg_type["TEXTOID"]] = builtins.pg_text_tolua 
-}
+local typeto = {}
 
-local datumfor = {
-  [pg_type["INT4OID"]] = builtins.lua_int4pg,
-}
+local datumfor = {}
+
+for k, v in pairs(pg_type) do
+  typeto[v.oid] = v.tolua 
+  datumfor[v.oid] = v.topg
+end
+
+
+
 
 local function datum_to_value(datum, atttypid)
 
