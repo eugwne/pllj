@@ -159,3 +159,16 @@ cdecl_enum(SysCacheIdentifier)
 cdecl_func(SearchSysCache)
 cdecl_func(ReleaseSysCache)
 cdecl_func(SysCacheGetAttr)
+
+cdecl_func(SPI_palloc)
+cdecl_const(VARHDRSZ) 
+
+#ifdef WORDS_BIGENDIAN
+#define D_WORDS_BIGENDIAN (1)
+#else
+#define D_WORDS_BIGENDIAN (0)
+#endif
+
+cdecl_const(D_WORDS_BIGENDIAN)
+
+cdecl_type(varattrib_4b)

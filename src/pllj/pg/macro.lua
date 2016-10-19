@@ -1,4 +1,5 @@
 local band = require("bit").band
+local lshift = require("bit").lshift
 
 local ffi = require('ffi')
 local C = ffi.C
@@ -20,6 +21,11 @@ end
 local function SET_4_BYTES(X)
   --(((Datum) (value)) & 0xffffffff)
   return (band(ffi.cast('Datum', X), 0xffffffff))
+end
+
+local function GET_2_BYTES(X)
+  --(((Datum) (value)) & 0x0000ffff)
+  return (band(ffi.cast('Datum', X), 0x0000ffff))
 end
 
 
@@ -46,9 +52,19 @@ local function HeapTupleHeaderGetXmin(tup)
   if HeapTupleHeaderXminFrozen(tup) then
     return FrozenTransactionId
   end
-  
+
   return HeapTupleHeaderGetRawXmin(tup)
 end
+
+local function SET_VARSIZE(PTR, len)
+  local varattrib_4b = ffi.cast('varattrib_4b *', PTR)
+  if (C.D_WORDS_BIGENDIAN == 0) then
+    varattrib_4b.va_4byte.va_header = lshift(ffi.cast('uint32', len), 2)
+  else
+    varattrib_4b.va_4byte.va_header = band(len, 0x3FFFFFFF)
+  end
+end
+
 
 return {
   GETSTRUCT = GETSTRUCT,
@@ -58,5 +74,7 @@ return {
   HeapTupleHeaderXminFrozen = HeapTupleHeaderXminFrozen,
   DatumGetArrayTypeP = DatumGetArrayTypeP,
   HeapTupleHeaderGetRawXmin = HeapTupleHeaderGetRawXmin,
-  HeapTupleHeaderGetXmin = HeapTupleHeaderGetXmin
-  }
+  HeapTupleHeaderGetXmin = HeapTupleHeaderGetXmin,
+  GET_2_BYTES = GET_2_BYTES,
+  SET_VARSIZE = SET_VARSIZE,
+}

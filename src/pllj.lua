@@ -77,13 +77,13 @@ function pllj.callhandler (fcinfo)
       table.insert(args, NULL)
     else 
       local typeoid = func_struct.argtypes[i+1]
-      local iof = typeto[typeoid]
+      local converter_to_lua = typeto[typeoid]
 
-      if not iof then
+      if not converter_to_lua then
         spi.disconnect()
         error('no conversion for type '..typeoid)
       end
-      table.insert(args, iof(fcinfo.arg[i]))
+      table.insert(args, converter_to_lua(fcinfo.arg[i]))
     end
 
 end

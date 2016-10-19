@@ -219,7 +219,11 @@ static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 	}
 
 	if( status == LUA_ERRRUN) {
-		pg_throw("FIXME! error not converted");//luapg_error(L1);
+		if (call_depth > 0) {
+			pg_throw("FIXME! error not converted");//luapg_error(L1);
+		}else{
+			luapg_error(L1);
+		}
 	} else if (status == LUA_ERRMEM) {
 		pg_throw("%s %s","Memory error:",error_text);
 	} else if (status == LUA_ERRERR) {

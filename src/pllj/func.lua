@@ -37,7 +37,7 @@ local function get_func_from_oid(oid)
       pg_proc.defines.Anum_pg_proc_proargnames, isNull)
     if isNull[0] == false then
       local argname = ffi.new 'Datum *[1]'
-      C.deconstruct_array(macro.DatumGetArrayTypeP(argnames), pg_type["TEXTOID"], -1, false,
+      C.deconstruct_array(macro.DatumGetArrayTypeP(argnames), pg_type.text.oid, -1, false,
         string.byte('i'), argname, nil, nnames)
 
       vararg = (nargs ~= nnames[0]) 
@@ -45,7 +45,7 @@ local function get_func_from_oid(oid)
       local ttypes = {}
       if not vararg then
         for i = 0, nnames[0] - 1 do
-          local arg = builtins.pg_text_tolua(argname[0][i])
+          local arg = builtins.text.tolua(argname[0][i])
           table.insert(targ, arg)
           table.insert(ttypes, tonumber(argtypes[i]))
 
@@ -68,7 +68,7 @@ local function get_func_from_oid(oid)
   end
 
   local prosrc = C.SysCacheGetAttr(syscache.enum.PROCOID, proc, pg_proc.defines.Anum_pg_proc_prosrc, isNull);
-  prosrc = builtins.pg_text_tolua(prosrc)
+  prosrc = builtins.text.tolua(prosrc)
   if (isNull[0] == true) then
     error( "null prosrc for function ".. oid);
   end

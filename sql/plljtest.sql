@@ -91,3 +91,12 @@ CREATE OR REPLACE FUNCTION validation_error()
 $BODY$
 ret value
 $BODY$ LANGUAGE pllj;
+
+CREATE FUNCTION echo_int2(arg int2) RETURNS int2 AS $$ return arg $$ LANGUAGE pllj;
+SELECT echo_int2('12345');
+CREATE FUNCTION echo_int4(arg int4) RETURNS int4 AS $$ return arg $$ LANGUAGE pllj;
+SELECT echo_int4('1234567890');
+CREATE FUNCTION echo_int8(arg int8) RETURNS int8 AS $$ return arg $$ LANGUAGE pllj;
+SELECT echo_int8('1234567890123456789');
+CREATE FUNCTION echo_text(arg text) RETURNS text AS $$ return arg $$ LANGUAGE pllj;
+SELECT echo_text('qwe''qwe');
