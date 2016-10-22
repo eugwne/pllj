@@ -16,6 +16,9 @@ before_install:
   - sudo add-apt-repository ppa:neomantra/luajit-v2.1 -y && sudo apt-get update -y;
   - sudo apt-get install $LUA
   - sudo apt-get install $LUA_DEV
+  - sudo apt-get install luarocks
+  - sudo luarocks install luasql-postgres
+  - sudo luarocks install busted
   - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
   - gcc --version
   - sudo apt-get install gcc-5-plugin-dev
@@ -37,7 +40,7 @@ before_script:
 
 env:
   matrix:
-    - PGVERSION=9.5 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
+#    - PGVERSION=9.5 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
     - PGVERSION=9.6 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
 
 
