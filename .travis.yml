@@ -17,7 +17,7 @@ before_install:
   - sudo apt-get install $LUA
   - sudo apt-get install $LUA_DEV
   - sudo apt-get install luarocks
-  - sudo luarocks install luasql-postgres PGSQL_INCDIR=/usr/include/postgresql/$PGVERSION/server
+  - sudo luarocks install luasql-postgres PGSQL_INCDIR=/usr/include/postgresql/$PGVERSION/server/include
   - sudo luarocks install busted
   - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
   - gcc --version
