@@ -7,4 +7,4 @@ local pg_type = {
   int8 =    {oid = 20,  tolua = false, topg = false},
 }
 
-return pg_type
+return {pg_type = pg_type}

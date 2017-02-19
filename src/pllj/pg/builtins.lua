@@ -4,7 +4,7 @@ local C = ffi.C;
 
 local macro = require('pllj.pg.macro')
 
-local pg_type = require('pllj.pg.pg_type')
+local pg_type = require('pllj.pg.pg_type').pg_type
 
 pg_type.text.tolua = function (datum) 
   local d = C.DirectFunctionCall1Coll(C.textout, 0, datum)

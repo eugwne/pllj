@@ -25,7 +25,7 @@ end
 
 local pg_error = require('pllj.pg.pg_error')
 
-local datum_to_value = require('pllj.io').datum_to_value
+local to_lua = require('pllj.io').to_lua
 
 function spi.execute(query)
   local result = -1
@@ -57,7 +57,7 @@ function spi.execute(query)
         --local val = C.SPI_getbinval(tuple, tupleDesc, k, isNull)
 
         local val = C.pllj_heap_getattr(tuple, attnum, tupleDesc,  isNull)
-        val = datum_to_value(val, atttypid) 
+        val = to_lua(atttypid)(val)
 
         row[k+1] = isNull[0] == false and val or NULL
 

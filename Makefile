@@ -1,4 +1,5 @@
-PG_CONFIG ?= pg_config #/usr/local/pgsql/bin/pg_config
+#PG_CONFIG ?= /usr/local/pgsql/bin/pg_config #pg_config #/usr/local/pgsql/bin/pg_config
+PG_CONFIG ?= pg_config
 PKG_LIBDIR := $(shell $(PG_CONFIG) --pkglibdir)
 
 LUA_INCDIR ?= /usr/local/include/luajit-2.1

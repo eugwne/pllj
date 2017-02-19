@@ -19,7 +19,8 @@
 #include <executor/spi.h> 
 #include <catalog/pg_attribute.h> 
 #include <access/tupdesc.h>
-#include <utils/syscache.h> 
+#include <utils/syscache.h>
+#include <utils/memutils.h>
 #include <miscadmin.h> 
 
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
@@ -172,3 +173,16 @@ cdecl_const(VARHDRSZ)
 cdecl_const(D_WORDS_BIGENDIAN)
 
 cdecl_type(varattrib_4b)
+
+cdecl_const(TYPTYPE_BASE)
+cdecl_const(TYPTYPE_COMPOSITE)
+cdecl_const(TYPTYPE_DOMAIN)
+cdecl_const(TYPTYPE_ENUM)
+cdecl_const(TYPTYPE_PSEUDO)
+cdecl_const(TYPTYPE_RANGE)
+
+cdecl_func(fmgr_info_cxt)
+cdecl_var(CurrentMemoryContext)
+cdecl_var(TopMemoryContext)
+cdecl_func(OutputFunctionCall)
+
