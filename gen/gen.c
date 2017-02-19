@@ -186,3 +186,5 @@ cdecl_var(CurrentMemoryContext)
 cdecl_var(TopMemoryContext)
 cdecl_func(OutputFunctionCall)
 
+cdecl_const(TRIGGEROID)
+

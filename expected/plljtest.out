@@ -158,3 +158,15 @@ SELECT echo_text('qwe''qwe');
  qwe'qwe
 (1 row)
 
+CREATE TABLE table_1
+(
+   id serial,
+   column_1 int8
+) ;
+CREATE FUNCTION pllj_t1() RETURNS trigger AS $$
+  print('trigger call')
+$$ LANGUAGE pllj;
+CREATE TRIGGER bi_table_1 BEFORE INSERT OR UPDATE OR DELETE ON table_1
+  FOR EACH ROW EXECUTE PROCEDURE pllj_t1();
+insert into table_1 (column_1) values(5);
+INFO:  trigger call

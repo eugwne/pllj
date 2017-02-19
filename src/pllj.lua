@@ -18,6 +18,7 @@ pllj._VERSION = "pllj 0.1"
 
 ffi.cdef [[
 void set_pllj_call_result(Datum result);
+bool lj_CALLED_AS_TRIGGER (void* fcinfo);
 ]]
 local C = ffi.C;
 
@@ -27,6 +28,39 @@ print = function(text)
 end
 
 local spi = require('pllj.spi')
+
+local function throw_error(...)
+    spi.disconnect()
+    error(...)
+end
+
+local function error_xcall(err)
+    if type(err) == "table" then
+        if err.detail == nil then
+            err.detail = debug.traceback()
+        end
+        return err
+    else
+        return { message = err, detail = debug.traceback() }
+    end
+end
+
+local function exec(f)
+    local status, err, ret = xpcall(f, error_xcall)
+
+    if status ~= true then
+        if type(err) == "table" then
+            if err.detail == nil then
+                err.detail = debug.traceback()
+            end
+            throw_error(err)
+        else
+            throw_error({ message = err, detail = debug.traceback() })
+        end
+    end
+    return ret
+end
+
 
 
 local pllj_func = require('pllj.func')
@@ -38,6 +72,16 @@ local to_lua = require('pllj.io').to_lua
 local datumfor = require('pllj.io').datumfor
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
+
+local function trigger_handler(func_struct, fcinfo)
+    if func_struct.result_type ~= C.TRIGGEROID then
+        return throw_error('wrong trigger function')
+    end
+    -- TODO pcall
+    func_struct.func()
+    --TODO: triggers
+    --throw_error('NYI:triggers')
+end
 
 
 function pllj.validator(fn_oid)
@@ -58,7 +102,11 @@ function pllj.callhandler(fcinfo)
         function_cache[fn_oid] = func_struct
     end
 
-    --[[istrigger = CALLED_AS_TRIGGER(fcinfo)]]
+    local istrigger = C.lj_CALLED_AS_TRIGGER(fcinfo)
+    if istrigger then
+        trigger_handler(func_struct, fcinfo) --result_type
+        return spi.disconnect()
+    end
     local args = {}
     for i = 0, fcinfo.nargs - 1 do
         if fcinfo.argnull[i] == true then
@@ -68,8 +116,7 @@ function pllj.callhandler(fcinfo)
             local converter_to_lua = to_lua(typeoid)
 
             if not converter_to_lua then
-                spi.disconnect()
-                error('no conversion for type ' .. typeoid)
+                throw_error('no conversion for type ' .. typeoid)
             end
             table.insert(args, converter_to_lua(fcinfo.arg[i]))
         end
@@ -79,9 +126,8 @@ function pllj.callhandler(fcinfo)
     local iof = datumfor[func_struct.result_type]
 
     if not iof then
-        spi.disconnect()
         --get_pg_typeinfo(func_struct.result_type)
-        error('no conversion for type ' .. tostring(func_struct.result_type))
+        throw_error('no conversion for type ' .. tostring(func_struct.result_type))
     end
     if not result or result == NULL then
         fcinfo.isnull = true
@@ -89,7 +135,7 @@ function pllj.callhandler(fcinfo)
     end
 
     C.set_pllj_call_result(iof(result))
-    spi.disconnect()
+    return spi.disconnect()
 end
 
 function pllj.inlinehandler(...)
@@ -97,33 +143,11 @@ function pllj.inlinehandler(...)
     local text = select(1, ...)
     local f, err = loadstring(text)
     if (f) then
-        local status, err = xpcall(f, function(err)
-            if type(err) == "table" then
-                if err.detail == nil then
-                    err.detail = debug.traceback()
-                end
-                return err
-            else
-                return { message = err, detail = debug.traceback() }
-            end
-        end)
-        spi.disconnect()
-        if status ~= true then
-            if type(err) == "table" then
-                if err.detail == nil then
-                    err.detail = debug.traceback()
-                end
-                error(err)
-            else
-                error({ message = err, detail = debug.traceback() })
-            end
-        end
-
-
+        exec(f)
     else
-        spi.disconnect()
-        error(err)
+        throw_error(err)
     end
+    return spi.disconnect()
 end
 
 return pllj

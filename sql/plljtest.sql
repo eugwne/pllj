@@ -100,3 +100,18 @@ CREATE FUNCTION echo_int8(arg int8) RETURNS int8 AS $$ return arg $$ LANGUAGE pl
 SELECT echo_int8('1234567890123456789');
 CREATE FUNCTION echo_text(arg text) RETURNS text AS $$ return arg $$ LANGUAGE pllj;
 SELECT echo_text('qwe''qwe');
+
+
+CREATE TABLE table_1
+(
+   id serial,
+   column_1 int8
+) ;
+
+CREATE FUNCTION pllj_t1() RETURNS trigger AS $$
+  print('trigger call')
+$$ LANGUAGE pllj;
+
+CREATE TRIGGER bi_table_1 BEFORE INSERT OR UPDATE OR DELETE ON table_1
+  FOR EACH ROW EXECUTE PROCEDURE pllj_t1();
+insert into table_1 (column_1) values(5);

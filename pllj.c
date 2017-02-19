@@ -33,7 +33,7 @@ PG_MODULE_MAGIC;
 	}\
 	}while(0)
 
-static void pllua_parse_error(lua_State *L, ErrorData *edata){
+static void pllj_parse_error(lua_State *L, ErrorData *edata){
 	lua_pushnil(L);
 	while (lua_next(L, -2) != 0) {
 		if (lua_type(L, -2) == LUA_TSTRING){
@@ -79,6 +79,11 @@ int lj_SPI_execute(const char *src, bool read_only, long tcount) {
 	return result;
 }
 
+extern bool lj_CALLED_AS_TRIGGER (void* fcinfo);
+extern bool lj_CALLED_AS_TRIGGER (void* fcinfo) {
+	return CALLED_AS_TRIGGER((FunctionCallInfo)fcinfo);
+}
+
 static void luatable_report(lua_State *L, int elevel)
 {
 	ErrorData	edata;
@@ -92,7 +97,7 @@ static void luatable_report(lua_State *L, int elevel)
 	edata.hint = NULL;
 	edata.context = NULL;
 
-	pllua_parse_error(L, &edata);
+	pllj_parse_error(L, &edata);
 	lua_pop(L, lua_gettop(L));
 
 	elevel = Min(elevel, ERROR);
