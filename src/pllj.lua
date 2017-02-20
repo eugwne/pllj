@@ -21,6 +21,7 @@ void set_pllj_call_result(Datum result);
 bool lj_CALLED_AS_TRIGGER (void* fcinfo);
 ]]
 local C = ffi.C;
+local bit = require("bit")
 
 print = function(text)
     C.errstart(pgdef.elog["INFO"], "", 0, nil, nil)
@@ -73,10 +74,38 @@ local datumfor = require('pllj.io').datumfor
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
 
+local trigger_event = { 
+    when ={
+        [tonumber(C.TRIGGER_EVENT_BEFORE)] = "before",
+        [tonumber(C.TRIGGER_EVENT_AFTER)] = "after",
+        [tonumber(C.TRIGGER_EVENT_INSTEAD)] = "instead",
+        },
+    operation = {
+        [tonumber(C.TRIGGER_EVENT_INSERT)] = "insert",
+        [tonumber(C.TRIGGER_EVENT_DELETE)] = "delete",
+        [tonumber(C.TRIGGER_EVENT_UPDATE)] = "update",
+        [tonumber(C.TRIGGER_EVENT_TRUNCATE)] = "truncate",
+    }   
+}
+
 local function trigger_handler(func_struct, fcinfo)
     if func_struct.result_type ~= C.TRIGGEROID then
         return throw_error('wrong trigger function')
     end
+    local tdata = ffi.cast('TriggerData*', fcinfo.context) 
+    local trigger = {
+        level = bit.band(tdata.tg_event, C.TRIGGER_EVENT_ROW) and "row" or "statement",
+        operation = trigger_event.operation[bit.band(tdata.tg_event, C.TRIGGER_EVENT_OPMASK)],
+        when = trigger_event.when[bit.band(tdata.tg_event, C.TRIGGER_EVENT_TIMINGMASK)]
+    }
+    --print(trigger.level) --"when"
+    --print(trigger.operation) --"level"
+    --print(trigger.when)
+    local relname = ffi.string(tdata.tg_relation.rd_rel.relname.data)
+    --print(relname)
+    local namespace = ffi.string(C.get_namespace_name(tdata.tg_relation.rd_rel.relnamespace))
+    --print(namespace)
+    --"operation"
     -- TODO pcall
     func_struct.func()
     --TODO: triggers

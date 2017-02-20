@@ -20,8 +20,11 @@
 #include <catalog/pg_attribute.h> 
 #include <access/tupdesc.h>
 #include <utils/syscache.h>
+#include <utils/lsyscache.h>
 #include <utils/memutils.h>
+#include <utils/rel.h>
 #include <miscadmin.h> 
+#include <commands/trigger.h>
 
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
@@ -187,4 +190,33 @@ cdecl_var(TopMemoryContext)
 cdecl_func(OutputFunctionCall)
 
 cdecl_const(TRIGGEROID)
+
+cdecl_enum(NodeTag)
+
+cdecl_struct(FormData_pg_class)
+cdecl_struct(LockRelId)
+cdecl_struct(LockInfoData)
+cdecl_struct(RelFileNode)
+cdecl_struct(RelationData)
+
+cdecl_struct(TriggerData)
+cdecl_type(TriggerData)
+
+
+cdecl_const(TRIGGER_EVENT_INSERT)
+cdecl_const(TRIGGER_EVENT_DELETE)
+cdecl_const(TRIGGER_EVENT_UPDATE)
+cdecl_const(TRIGGER_EVENT_TRUNCATE)
+cdecl_const(TRIGGER_EVENT_OPMASK)
+
+cdecl_const(TRIGGER_EVENT_ROW)
+
+cdecl_const(TRIGGER_EVENT_BEFORE)
+cdecl_const(TRIGGER_EVENT_AFTER)
+cdecl_const(TRIGGER_EVENT_INSTEAD)
+cdecl_const(TRIGGER_EVENT_TIMINGMASK)
+
+cdecl_const(NAMEDATALEN)
+
+cdecl_func(get_namespace_name);
 

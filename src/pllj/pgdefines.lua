@@ -1,4 +1,6 @@
 local pgdefines = {}
+local C = require('ffi').C
+
 
 pgdefines.elog = { 
 	["LOG"] = 15,
@@ -11,7 +13,7 @@ pgdefines.elog = {
 }
 
 pgdefines.pg_config_manual = {
-  ["NAMEDATALEN"] = 64
+  ["NAMEDATALEN"] = C.NAMEDATALEN
 }
 
 pgdefines.spi = {
