@@ -88,6 +88,15 @@ local trigger_event = {
     }   
 }
 
+local function print_named( t )
+    print('_______')
+    for k, v in pairs(t) do
+        print(tostring(k))
+        print (' = ' .. tostring(v))
+    end
+    print('------')
+end
+local tuple_to_lua_table = require('pllj.tuple_ops').tuple_to_lua_table
 local function trigger_handler(func_struct, fcinfo)
     if func_struct.result_type ~= C.TRIGGEROID then
         return throw_error('wrong trigger function')
@@ -104,7 +113,22 @@ local function trigger_handler(func_struct, fcinfo)
     local relname = ffi.string(tdata.tg_relation.rd_rel.relname.data)
     --print(relname)
     local namespace = ffi.string(C.get_namespace_name(tdata.tg_relation.rd_rel.relnamespace))
-    --print(namespace)
+
+    local tupleDesc = tdata.tg_relation.rd_att
+    local row = tuple_to_lua_table(tupleDesc, tdata.tg_trigtuple)
+    local old_row 
+    if trigger.level == "row" and trigger.when == "update" then
+        old_row = row
+        row = tuple_to_lua_table(tupleDesc, tdata.tg_newtuple)
+    end
+
+    local name = ffi.string(tdata.tg_trigger.tgname)
+    --print(name)
+
+
+    
+    --print_named(row)
+    --print(tupleDesc)
     --"operation"
     -- TODO pcall
     func_struct.func()
@@ -114,8 +138,11 @@ end
 
 
 function pllj.validator(fn_oid)
-
-    function_cache[fn_oid] = get_func_from_oid(fn_oid)
+    local f, err = get_func_from_oid(fn_oid)
+    if not f then 
+        error(err) 
+    end
+    function_cache[fn_oid] = f
 end
 
 
@@ -127,7 +154,11 @@ function pllj.callhandler(fcinfo)
 
 
     if not func_struct or need_update(func_struct) then
-        func_struct = get_func_from_oid(fn_oid)
+        local f, err = get_func_from_oid(fn_oid)
+        if not f then 
+            return throw_error(err) 
+        end
+        func_struct = f
         function_cache[fn_oid] = func_struct
     end
 
@@ -145,7 +176,7 @@ function pllj.callhandler(fcinfo)
             local converter_to_lua = to_lua(typeoid)
 
             if not converter_to_lua then
-                throw_error('no conversion for type ' .. typeoid)
+                return throw_error('no conversion for type ' .. typeoid)
             end
             table.insert(args, converter_to_lua(fcinfo.arg[i]))
         end
@@ -156,7 +187,7 @@ function pllj.callhandler(fcinfo)
 
     if not iof then
         --get_pg_typeinfo(func_struct.result_type)
-        throw_error('no conversion for type ' .. tostring(func_struct.result_type))
+        return throw_error('no conversion for type ' .. tostring(func_struct.result_type))
     end
     if not result or result == NULL then
         fcinfo.isnull = true

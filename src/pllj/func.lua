@@ -68,7 +68,7 @@ local function get_func_from_oid(oid)
     local prosrc = C.SysCacheGetAttr(syscache.enum.PROCOID, proc, pg_proc.defines.Anum_pg_proc_prosrc, isNull);
     prosrc = builtins.text.tolua(prosrc)
     if (isNull[0] == true) then
-        error("null prosrc for function " .. oid);
+        return nil, ("null prosrc for function " .. oid);
     end
 
     local fntext = {
@@ -87,7 +87,7 @@ local function get_func_from_oid(oid)
     local fn, err = loadstring(fntext)
 
     if not fn then
-        error({ message = err, context = fntext })
+        return nil, ({ message = err, context = fntext })
     end
 
 

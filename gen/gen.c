@@ -23,6 +23,7 @@
 #include <utils/lsyscache.h>
 #include <utils/memutils.h>
 #include <utils/rel.h>
+#include <utils/reltrigger.h>
 #include <miscadmin.h> 
 #include <commands/trigger.h>
 
@@ -199,6 +200,7 @@ cdecl_struct(LockInfoData)
 cdecl_struct(RelFileNode)
 cdecl_struct(RelationData)
 
+cdecl_struct(Trigger)
 cdecl_struct(TriggerData)
 cdecl_type(TriggerData)
 
