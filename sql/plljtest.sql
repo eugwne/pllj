@@ -109,7 +109,7 @@ CREATE TABLE table_1
 ) ;
 
 CREATE FUNCTION pllj_t1() RETURNS trigger AS $$
-  print('trigger call')
+  print('trigger call column_1 = '..  tostring(trigger.row.column_1))
 $$ LANGUAGE pllj;
 
 CREATE TRIGGER bi_table_1 BEFORE INSERT OR UPDATE OR DELETE ON table_1

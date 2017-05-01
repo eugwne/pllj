@@ -62,12 +62,9 @@ local function exec(f)
     return ret
 end
 
-
-
 local pllj_func = require('pllj.func')
 local get_func_from_oid = pllj_func.get_func_from_oid
 local need_update = pllj_func.need_update
-
 
 local to_lua = require('pllj.io').to_lua
 local datumfor = require('pllj.io').datumfor
@@ -96,43 +93,51 @@ local function print_named( t )
     end
     print('------')
 end
+
 local tuple_to_lua_table = require('pllj.tuple_ops').tuple_to_lua_table
+local G_mt = {__index = _G}
+
 local function trigger_handler(func_struct, fcinfo)
     if func_struct.result_type ~= C.TRIGGEROID then
         return throw_error('wrong trigger function')
     end
-    local tdata = ffi.cast('TriggerData*', fcinfo.context) 
-    local trigger = {
-        level = bit.band(tdata.tg_event, C.TRIGGER_EVENT_ROW) and "row" or "statement",
-        operation = trigger_event.operation[bit.band(tdata.tg_event, C.TRIGGER_EVENT_OPMASK)],
-        when = trigger_event.when[bit.band(tdata.tg_event, C.TRIGGER_EVENT_TIMINGMASK)]
-    }
-    --print(trigger.level) --"when"
-    --print(trigger.operation) --"level"
-    --print(trigger.when)
+    local tdata = ffi.cast('TriggerData*', fcinfo.context)
+    local trigger_level = bit.band(tdata.tg_event, C.TRIGGER_EVENT_ROW) and "row" or "statement"
+    local trigger_operation = trigger_event.operation[bit.band(tdata.tg_event, C.TRIGGER_EVENT_OPMASK)]
+    local trigger_when = trigger_event.when[bit.band(tdata.tg_event, C.TRIGGER_EVENT_TIMINGMASK)]
+
     local relname = ffi.string(tdata.tg_relation.rd_rel.relname.data)
-    --print(relname)
     local namespace = ffi.string(C.get_namespace_name(tdata.tg_relation.rd_rel.relnamespace))
+    local relation_oid = tonumber(tdata.tg_relation.rd_id)
 
     local tupleDesc = tdata.tg_relation.rd_att
     local row = tuple_to_lua_table(tupleDesc, tdata.tg_trigtuple)
     local old_row 
-    if trigger.level == "row" and trigger.when == "update" then
+    if trigger_level == "row" and trigger_when == "update" then
         old_row = row
         row = tuple_to_lua_table(tupleDesc, tdata.tg_newtuple)
     end
 
-    local name = ffi.string(tdata.tg_trigger.tgname)
-    --print(name)
+    local trigger_name = ffi.string(tdata.tg_trigger.tgname)
 
+    local trigger = {
+        level = trigger_level,
+        operation = trigger_operation,
+        when = trigger_when,
+        name = trigger_name,
+        old = old_row,
+        row = row,
+        relation = {
+            namespace = namespace,
+            name = relname,
+            oid = relation_oid
+        }
+    }
 
-    
-    --print_named(row)
-    --print(tupleDesc)
-    --"operation"
-    -- TODO pcall
+    local newgt = {trigger = trigger}
+    setmetatable(newgt, G_mt)
+    setfenv(func_struct.func, newgt)
     func_struct.func()
-    --TODO: triggers
     --throw_error('NYI:triggers')
 end
 
