@@ -8,8 +8,6 @@ local function tuple_to_lua_1array(tupleDesc, tuple)
         local row = {}
         local natts = tupleDesc.natts
         for k = 0, natts-1 do
-            --local attname = tupleDesc.attrs[k].attname;
-            --local columnName =  (ffi.string(attname, NAMEDATALEN))
             local attnum = tupleDesc.attrs[k].attnum;
             local atttypid = tupleDesc.attrs[k].atttypid;
             --local val = C.SPI_getbinval(tuple, tupleDesc, k, isNull)

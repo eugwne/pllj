@@ -220,5 +220,7 @@ cdecl_const(TRIGGER_EVENT_TIMINGMASK)
 
 cdecl_const(NAMEDATALEN)
 
-cdecl_func(get_namespace_name);
+cdecl_func(get_namespace_name)
+
+cdecl_func(heap_form_tuple)
 
