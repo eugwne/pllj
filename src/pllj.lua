@@ -69,15 +69,6 @@ local datumfor = require('pllj.io').datumfor
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
 
-local function print_named( t )
-    print('_______')
-    for k, v in pairs(t) do
-        print(tostring(k))
-        print (' = ' .. tostring(v))
-    end
-    print('------')
-end
-
 local trigger_handler = require('pllj.trigger').trigger_handler
 
 function pllj.validator(fn_oid)
