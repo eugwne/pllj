@@ -43,9 +43,9 @@ cdecl_type(int16)
 cdecl_type(uint16)
 cdecl_type(int8)
 cdecl_type(uint8)
-cdecl_type(bits8)			
-cdecl_type(bits16)			
-cdecl_type(bits32)	
+cdecl_type(bits8)
+cdecl_type(bits16)
+cdecl_type(bits32)
 
 cdecl_type(OffsetNumber)
 
@@ -223,4 +223,20 @@ cdecl_const(NAMEDATALEN)
 cdecl_func(get_namespace_name)
 
 cdecl_func(heap_form_tuple)
+
+#define SIZEOF_DATUM ((int32) sizeof(Datum))
+cdecl_const(SIZEOF_DATUM)
+#define SIZEOF_BOOL ((int32) sizeof(bool))
+cdecl_const(SIZEOF_BOOL)
+
+cdecl_func(palloc)
+cdecl_func(pfree)
+
+cdecl_func(heap_copy_tuple_as_datum)
+cdecl_func(heap_freetuple)
+
+cdecl_const(HEAPTUPLESIZE)
+//cdecl_func(DatumGetHeapTupleHeader)
+cdecl_func(SPI_returntuple)
+cdecl_func(SPI_copytuple)
 

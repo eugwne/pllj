@@ -107,10 +107,13 @@ function pllj.callhandler(fcinfo)
 
     local istrigger = C.lj_CALLED_AS_TRIGGER(fcinfo)
     if istrigger then
-        local trg_result = trigger_handler(func_struct, fcinfo) --result_type
-        if trg_result then
-            C.set_pllj_call_result(ffi.cast('uint64_t', trg_result))
+        local status, trg_result = trigger_handler(func_struct, fcinfo) --result_type
+        if status then
+            C.set_pllj_call_result(ffi.cast('Datum', trg_result))
+            return spi.disconnect()
         end
+
+
         return spi.disconnect()
     end
     local args = {}

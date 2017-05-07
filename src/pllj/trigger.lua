@@ -24,6 +24,7 @@ local trigger_event = {
 }
 
 local tuple_to_lua_table = require('pllj.tuple_ops').tuple_to_lua_table
+local lua_table_to_tuple = require('pllj.tuple_ops').lua_table_to_tuple
 local G_mt = {__index = _G }
 
 local private_key = {}
@@ -85,9 +86,14 @@ local function trigger_handler(func_struct, fcinfo)
     setmetatable(newgt, G_mt)
     setfenv(func_struct.func, newgt)
     func_struct.func()
+
     if trigger_level == "row" and trigger_when == "before" then
-        --print(tostring(row[private_key_changes])..' changed')
-        return tdata.tg_trigtuple
+
+        if row[private_key_changes] then
+            return true, C.SPI_copytuple(lua_table_to_tuple(tupleDesc, row))
+        end
+
+        return true, tdata.tg_trigtuple
     end
     --throw_error('NYI:triggers')
 end

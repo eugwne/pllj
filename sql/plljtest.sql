@@ -110,8 +110,14 @@ CREATE TABLE table_1
 
 CREATE FUNCTION pllj_t1() RETURNS trigger AS $$
   print('trigger call column_1 = '..  tostring(trigger.row.column_1))
+  local value = trigger.row.column_1
+  if value > 10 then
+    trigger.row.column_1 = value * 2
+  end
 $$ LANGUAGE pllj;
 
 CREATE TRIGGER bi_table_1 BEFORE INSERT OR UPDATE OR DELETE ON table_1
   FOR EACH ROW EXECUTE PROCEDURE pllj_t1();
 insert into table_1 (column_1) values(5);
+insert into table_1 (column_1) values(15);
+select column_1 from table_1 order by 1;
