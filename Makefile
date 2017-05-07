@@ -1,4 +1,5 @@
-PG_CONFIG ?= pg_config #/usr/local/pgsql/bin/pg_config
+#PG_CONFIG ?= /usr/local/pgsql/bin/pg_config
+PG_CONFIG ?= pg_config
 PKG_LIBDIR := $(shell $(PG_CONFIG) --pkglibdir)
 
 LUA_INCDIR ?= /usr/local/include/luajit-2.1
@@ -27,6 +28,7 @@ install-module:
 	cp src/pllj.lua $(LUA_DIR)/pllj.lua
 	cp src/pllj/pgdefines.lua $(LUA_DIR)/pllj/pgdefines.lua
 	cp src/pllj/func.lua $(LUA_DIR)/pllj/func.lua
+	cp src/pllj/trigger.lua $(LUA_DIR)/pllj/trigger.lua
 	cp src/pllj/spi.lua $(LUA_DIR)/pllj/spi.lua
 	cp src/pllj/pg/i.lua $(LUA_DIR)/pllj/pg/i.lua
 	cp src/pllj/pg/macro.lua $(LUA_DIR)/pllj/pg/macro.lua
@@ -37,3 +39,4 @@ install-module:
 	cp src/pllj/pg/pg_proc.lua $(LUA_DIR)/pllj/pg/pg_proc.lua
 	cp src/pllj/pg/c.lua $(LUA_DIR)/pllj/pg/c.lua
 	cp src/pllj/io.lua $(LUA_DIR)/pllj/io.lua 
+	cp src/pllj/tuple_ops.lua $(LUA_DIR)/pllj/tuple_ops.lua 

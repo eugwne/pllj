@@ -19,8 +19,13 @@
 #include <executor/spi.h> 
 #include <catalog/pg_attribute.h> 
 #include <access/tupdesc.h>
-#include <utils/syscache.h> 
+#include <utils/syscache.h>
+#include <utils/lsyscache.h>
+#include <utils/memutils.h>
+#include <utils/rel.h>
+#include <utils/reltrigger.h>
 #include <miscadmin.h> 
+#include <commands/trigger.h>
 
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
@@ -38,9 +43,9 @@ cdecl_type(int16)
 cdecl_type(uint16)
 cdecl_type(int8)
 cdecl_type(uint8)
-cdecl_type(bits8)			
-cdecl_type(bits16)			
-cdecl_type(bits32)	
+cdecl_type(bits8)
+cdecl_type(bits16)
+cdecl_type(bits32)
 
 cdecl_type(OffsetNumber)
 
@@ -172,3 +177,66 @@ cdecl_const(VARHDRSZ)
 cdecl_const(D_WORDS_BIGENDIAN)
 
 cdecl_type(varattrib_4b)
+
+cdecl_const(TYPTYPE_BASE)
+cdecl_const(TYPTYPE_COMPOSITE)
+cdecl_const(TYPTYPE_DOMAIN)
+cdecl_const(TYPTYPE_ENUM)
+cdecl_const(TYPTYPE_PSEUDO)
+cdecl_const(TYPTYPE_RANGE)
+
+cdecl_func(fmgr_info_cxt)
+cdecl_var(CurrentMemoryContext)
+cdecl_var(TopMemoryContext)
+cdecl_func(OutputFunctionCall)
+
+cdecl_const(TRIGGEROID)
+
+cdecl_enum(NodeTag)
+
+cdecl_struct(FormData_pg_class)
+cdecl_struct(LockRelId)
+cdecl_struct(LockInfoData)
+cdecl_struct(RelFileNode)
+cdecl_struct(RelationData)
+
+cdecl_struct(Trigger)
+cdecl_struct(TriggerData)
+cdecl_type(TriggerData)
+
+
+cdecl_const(TRIGGER_EVENT_INSERT)
+cdecl_const(TRIGGER_EVENT_DELETE)
+cdecl_const(TRIGGER_EVENT_UPDATE)
+cdecl_const(TRIGGER_EVENT_TRUNCATE)
+cdecl_const(TRIGGER_EVENT_OPMASK)
+
+cdecl_const(TRIGGER_EVENT_ROW)
+
+cdecl_const(TRIGGER_EVENT_BEFORE)
+cdecl_const(TRIGGER_EVENT_AFTER)
+cdecl_const(TRIGGER_EVENT_INSTEAD)
+cdecl_const(TRIGGER_EVENT_TIMINGMASK)
+
+cdecl_const(NAMEDATALEN)
+
+cdecl_func(get_namespace_name)
+
+cdecl_func(heap_form_tuple)
+
+#define SIZEOF_DATUM ((int32) sizeof(Datum))
+cdecl_const(SIZEOF_DATUM)
+#define SIZEOF_BOOL ((int32) sizeof(bool))
+cdecl_const(SIZEOF_BOOL)
+
+cdecl_func(palloc)
+cdecl_func(pfree)
+
+cdecl_func(heap_copy_tuple_as_datum)
+cdecl_func(heap_freetuple)
+
+cdecl_const(HEAPTUPLESIZE)
+//cdecl_func(DatumGetHeapTupleHeader)
+cdecl_func(SPI_returntuple)
+cdecl_func(SPI_copytuple)
+
