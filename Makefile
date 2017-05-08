@@ -32,11 +32,11 @@ install-module:
 	cp src/pllj/spi.lua $(LUA_DIR)/pllj/spi.lua
 	cp src/pllj/pg/i.lua $(LUA_DIR)/pllj/pg/i.lua
 	cp src/pllj/pg/macro.lua $(LUA_DIR)/pllj/pg/macro.lua
-	cp src/pllj/pg/pg_type.lua $(LUA_DIR)/pllj/pg/pg_type.lua
 	cp src/pllj/pg/pg_error.lua $(LUA_DIR)/pllj/pg/pg_error.lua
 	cp src/pllj/pg/syscache.lua $(LUA_DIR)/pllj/pg/syscache.lua
-	cp src/pllj/pg/builtins.lua $(LUA_DIR)/pllj/pg/builtins.lua
-	cp src/pllj/pg/pg_proc.lua $(LUA_DIR)/pllj/pg/pg_proc.lua
+	cp src/pllj/pg/init_c.lua $(LUA_DIR)/pllj/pg/init_c.lua
+	cp src/pllj/pg/to_lua.lua $(LUA_DIR)/pllj/pg/to_lua.lua
+	cp src/pllj/pg/to_pg.lua $(LUA_DIR)/pllj/pg/to_pg.lua
 	cp src/pllj/pg/c.lua $(LUA_DIR)/pllj/pg/c.lua
 	cp src/pllj/io.lua $(LUA_DIR)/pllj/io.lua 
 	cp src/pllj/tuple_ops.lua $(LUA_DIR)/pllj/tuple_ops.lua 

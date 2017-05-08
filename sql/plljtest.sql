@@ -98,6 +98,11 @@ CREATE FUNCTION echo_int4(arg int4) RETURNS int4 AS $$ return arg $$ LANGUAGE pl
 SELECT echo_int4('1234567890');
 CREATE FUNCTION echo_int8(arg int8) RETURNS int8 AS $$ return arg $$ LANGUAGE pllj;
 SELECT echo_int8('1234567890123456789');
+CREATE FUNCTION int64_minus_one(value bigint)
+RETURNS bigint AS $$
+  return value - 1;
+$$ LANGUAGE pllj;
+select int64_minus_one(9223372036854775807);
 CREATE FUNCTION echo_text(arg text) RETURNS text AS $$ return arg $$ LANGUAGE pllj;
 SELECT echo_text('qwe''qwe');
 

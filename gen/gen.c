@@ -240,3 +240,9 @@ cdecl_const(HEAPTUPLESIZE)
 cdecl_func(SPI_returntuple)
 cdecl_func(SPI_copytuple)
 
+cdecl_const(INT2OID)
+cdecl_const(INT4OID)
+cdecl_const(INT8OID)
+cdecl_const(TEXTOID)
+cdecl_const(VOIDOID)
+

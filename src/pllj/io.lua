@@ -1,14 +1,6 @@
-local _ = require('pllj.pg.builtins')
-local pg_type = require('pllj.pg.pg_type').pg_type
+local typeto = require('pllj.pg.to_lua').typeto
 
-local typeto = {}
-
-local datumfor = {}
-
-for _, v in pairs(pg_type) do
-    typeto[v.oid] = v.tolua
-    datumfor[v.oid] = v.topg
-end
+local datumfor = require('pllj.pg.to_pg').datumfor
 
 local syscache = require('pllj.pg.syscache')
 local macro = require('pllj.pg.macro')

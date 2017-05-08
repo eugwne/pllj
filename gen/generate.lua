@@ -66,22 +66,23 @@ gcc.register_callback(gcc.PLUGIN_FINISH_UNIT, function()
   print[=[local all_types=[[]=]
   print(table.concat(result))
   print[=[]]]=]
-  print('local pg_import = {}')
-  for k, v in pairs(decl_names) do
-    print(string.format("pg_import['%s'] = [[%s]]",k,v))
-  end
-  print[=[
-  local ffi = require('ffi')
-  pg_import.import = function(t)
-    local tnamed = {}
-    for i = 1, #t do
-      table.insert(tnamed, pg_import[t[i]])
-    end
-    return(table.concat(tnamed))
-  end
-  
-  pg_import.all_types = all_types
-  ]=]
-  print('return pg_import')
-  print([[--total ]]..#result)
+  print('return {all_types = all_types}')
+--  print('local pg_import = {}')
+--  for k, v in pairs(decl_names) do
+--    print(string.format("pg_import['%s'] = [[%s]]",k,v))
+--  end
+--  print[=[
+--  local ffi = require('ffi')
+--  pg_import.import = function(t)
+--    local tnamed = {}
+--    for i = 1, #t do
+--      table.insert(tnamed, pg_import[t[i]])
+--    end
+--    return(table.concat(tnamed))
+--  end
+--
+--  pg_import.all_types = all_types
+--  ]=]
+--  print('return pg_import')
+--  print([[--total ]]..#result)
 end)
