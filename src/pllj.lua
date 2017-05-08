@@ -3,8 +3,7 @@ local pllj = {}
 local function_cache = {}
 
 local ffi = require('ffi')
-local all_types = require('pllj.pg.i').all_types
-ffi.cdef(all_types)
+require('pllj.pg.init_c')
 
 local NULL = require('pllj.pg.c').NULL
 
@@ -123,6 +122,7 @@ function pllj.callhandler(fcinfo)
     end
     -- TODO pcall
     local result = func_struct.func(unpack(args))
+
     local iof = datumfor[func_struct.result_type]
 
     if not iof then

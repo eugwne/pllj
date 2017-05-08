@@ -1,12 +1,10 @@
 local ffi = require('ffi')
 local C = ffi.C
+require('pllj.pg.init_c')
 
 local macro = require('pllj.pg.macro')
 local syscache = require('pllj.pg.syscache')
-local pg_proc = require('pllj.pg.pg_proc')
-local builtins = require('pllj.pg.builtins')
-
-local pg_type = require('pllj.pg.pg_type').pg_type
+local text_to_lua = require('pllj.pg.to_lua').typeto[C.TEXTOID]
 
 local function get_func_from_oid(oid)
     local isNull = ffi.new("bool[?]", 1)
@@ -34,10 +32,10 @@ local function get_func_from_oid(oid)
         local vararg = false
         local nnames = ffi.new("int[?]", 1)
         local argnames = C.SysCacheGetAttr(syscache.enum.PROCOID, proc,
-            pg_proc.defines.Anum_pg_proc_proargnames, isNull)
+            C.Anum_pg_proc_proargnames, isNull)
         if isNull[0] == false then
             local argname = ffi.new 'Datum *[1]'
-            C.deconstruct_array(macro.DatumGetArrayTypeP(argnames), pg_type.text.oid, -1, false,
+            C.deconstruct_array(macro.DatumGetArrayTypeP(argnames), C.TEXTOID, -1, false,
                 string.byte('i'), argname, nil, nnames)
 
             vararg = (nargs ~= nnames[0])
@@ -45,7 +43,7 @@ local function get_func_from_oid(oid)
             local ttypes = {}
             if not vararg then
                 for i = 0, nnames[0] - 1 do
-                    local arg = builtins.text.tolua(argname[0][i])
+                    local arg = text_to_lua(argname[0][i])
                     table.insert(targ, arg)
                     table.insert(ttypes, tonumber(argtypes[i]))
 
@@ -65,8 +63,8 @@ local function get_func_from_oid(oid)
         end
     end
 
-    local prosrc = C.SysCacheGetAttr(syscache.enum.PROCOID, proc, pg_proc.defines.Anum_pg_proc_prosrc, isNull);
-    prosrc = builtins.text.tolua(prosrc)
+    local prosrc = C.SysCacheGetAttr(syscache.enum.PROCOID, proc, C.Anum_pg_proc_prosrc, isNull);
+    prosrc = text_to_lua(prosrc)
     if (isNull[0] == true) then
         return nil, ("null prosrc for function " .. oid);
     end

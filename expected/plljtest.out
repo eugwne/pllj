@@ -148,7 +148,17 @@ CREATE FUNCTION echo_int8(arg int8) RETURNS int8 AS $$ return arg $$ LANGUAGE pl
 SELECT echo_int8('1234567890123456789');
       echo_int8      
 ---------------------
- 1234567890123456768
+ 1234567890123456789
+(1 row)
+
+CREATE FUNCTION int64_minus_one(value bigint)
+RETURNS bigint AS $$
+  return value - 1;
+$$ LANGUAGE pllj;
+select int64_minus_one(9223372036854775807);
+   int64_minus_one   
+---------------------
+ 9223372036854775806
 (1 row)
 
 CREATE FUNCTION echo_text(arg text) RETURNS text AS $$ return arg $$ LANGUAGE pllj;
@@ -173,9 +183,9 @@ $$ LANGUAGE pllj;
 CREATE TRIGGER bi_table_1 BEFORE INSERT OR UPDATE OR DELETE ON table_1
   FOR EACH ROW EXECUTE PROCEDURE pllj_t1();
 insert into table_1 (column_1) values(5);
-INFO:  trigger call column_1 = 5
+INFO:  trigger call column_1 = 5LL
 insert into table_1 (column_1) values(15);
-INFO:  trigger call column_1 = 15
+INFO:  trigger call column_1 = 15LL
 select column_1 from table_1 order by 1;
  column_1 
 ----------
