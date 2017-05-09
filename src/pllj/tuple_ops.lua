@@ -1,7 +1,7 @@
 local ffi = require('ffi')
 local C = ffi.C
 local to_lua = require('pllj.io').to_lua
-local datumfor = require('pllj.io').datumfor
+local to_pg =require('pllj.io').to_pg
 local NULL = require('pllj.pg.c').NULL
 
 local isNull = ffi.new("bool[?]", 1)
@@ -62,7 +62,7 @@ local function lua_table_to_tuple(tupleDesc, table)
 
             local key = (ffi.string(ffi.cast('const char *', attr.attname)))
 
-            local iof = datumfor[attr.atttypid]
+            local iof = to_pg(attr.atttypid)
             local table_value = table[key]
             local isnull = (table_value == nil or table_value == NULL)
 
