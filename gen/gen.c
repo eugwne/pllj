@@ -27,6 +27,8 @@
 #include <miscadmin.h> 
 #include <commands/trigger.h>
 
+#include <parser/parse_type.h>
+
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
 cdecl_struct(varlena)
@@ -188,7 +190,9 @@ cdecl_const(TYPTYPE_RANGE)
 cdecl_func(fmgr_info_cxt)
 cdecl_var(CurrentMemoryContext)
 cdecl_var(TopMemoryContext)
+cdecl_var(CurTransactionContext)
 cdecl_func(OutputFunctionCall)
+//inlined cdecl_func(MemoryContextSwitchTo)
 
 cdecl_const(TRIGGEROID)
 
@@ -246,3 +250,6 @@ cdecl_const(INT8OID)
 cdecl_const(TEXTOID)
 cdecl_const(VOIDOID)
 
+//cdecl_func(stringToQualifiedNameList)
+cdecl_func(parseTypeString)
+cdecl_func(InputFunctionCall)

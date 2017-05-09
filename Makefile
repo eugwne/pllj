@@ -11,7 +11,8 @@ EXTENSION = pllj
 DATA = pllj--0.1.sql
 
 REGRESS = \
-plljtest 
+plljtest \
+type_string_conv
 
 OBJS = \
 pllj.o 
@@ -37,6 +38,7 @@ install-module:
 	cp src/pllj/pg/init_c.lua $(LUA_DIR)/pllj/pg/init_c.lua
 	cp src/pllj/pg/to_lua.lua $(LUA_DIR)/pllj/pg/to_lua.lua
 	cp src/pllj/pg/to_pg.lua $(LUA_DIR)/pllj/pg/to_pg.lua
+	cp src/pllj/pg/type_info.lua $(LUA_DIR)/pllj/pg/type_info.lua
 	cp src/pllj/pg/c.lua $(LUA_DIR)/pllj/pg/c.lua
 	cp src/pllj/io.lua $(LUA_DIR)/pllj/io.lua 
 	cp src/pllj/tuple_ops.lua $(LUA_DIR)/pllj/tuple_ops.lua 

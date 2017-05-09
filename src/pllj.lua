@@ -64,7 +64,7 @@ local get_func_from_oid = pllj_func.get_func_from_oid
 local need_update = pllj_func.need_update
 
 local to_lua = require('pllj.io').to_lua
-local datumfor = require('pllj.io').datumfor
+local to_pg =require('pllj.io').to_pg
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
 
@@ -123,7 +123,7 @@ function pllj.callhandler(fcinfo)
     -- TODO pcall
     local result = func_struct.func(unpack(args))
 
-    local iof = datumfor[func_struct.result_type]
+    local iof = to_pg(func_struct.result_type)
 
     if not iof then
         --get_pg_typeinfo(func_struct.result_type)
