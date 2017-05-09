@@ -1,4 +1,8 @@
 # pllj [![Build Status](https://travis-ci.org/eugwne/pllj.svg?branch=master)](https://travis-ci.org/eugwne/pllj)
 LuaJIT(2.1) FFI PostgreSQL language extension 
 
-PL/LJ is a proof of concept of creating postgres extension with minimum compiled code.
+Examples: see sql folder
+
+How to build: see .travis.yml 
+
+FFI wrappers are generated with a gcc plugin from gen/gen.c (see .travis.yml)
