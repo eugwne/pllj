@@ -118,8 +118,12 @@ cdecl_type(ItemPointerData)
 
 cdecl_func(SPI_connect)
 cdecl_func(SPI_finish)
+#ifndef SPI_push
 cdecl_func(SPI_push)
+#endif
+#ifndef SPI_pop
 cdecl_func(SPI_pop)
+#endif
 cdecl_var(SPI_processed)
 
 
