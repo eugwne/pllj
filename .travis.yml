@@ -1,10 +1,14 @@
 before_install:
+  - wget -qO- https://github.com/LuaJIT/LuaJIT/archive/v2.1.0-beta3.tar.gz | tar xvz
+  - cd ./LuaJIT-2.1.0-beta3
+  - make && sudo make install
+  - cd ../
   - psql --version
   - sudo /etc/init.d/postgresql stop
   - sudo apt-get -y --purge remove postgresql libpq-dev libpq5 postgresql-client-common postgresql-common
   - sudo rm -rf /var/lib/postgresql
   - wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-  - sudo sh -c "echo deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main $PGVERSION >> /etc/apt/sources.list.d/postgresql.list"
+  - sudo sh -c "echo deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main $PGVERSION >> /etc/apt/sources.list.d/postgresql.list"
   - sudo apt-get update -qq
   - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-server-dev-$PGVERSION
   - sudo chmod 777 /etc/postgresql/$PGVERSION/main/pg_hba.conf
@@ -13,9 +17,6 @@ before_install:
   - sudo echo "host    all         all         127.0.0.1/32          trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
   - sudo echo "host    all         all         ::1/128               trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
   - sudo /etc/init.d/postgresql restart
-  - sudo add-apt-repository ppa:neomantra/luajit-v2.1 -y && sudo apt-get update -y;
-  - sudo apt-get install $LUA
-  - sudo apt-get install $LUA_DEV
   - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
   - gcc --version
   - sudo apt-get install gcc-5-plugin-dev
@@ -37,8 +38,9 @@ before_script:
 
 env:
   matrix:
-    - PGVERSION=9.5 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
-    - PGVERSION=9.6 LUA=luajit LUA_DEV=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.1 LUALIB=-lluajit-5.1
+    - PGVERSION=9.5
+    - PGVERSION=9.6
+    - PGVERSION=10
 
 
 language: c
