@@ -4,10 +4,7 @@ local bit = require("bit")
 
 local C = ffi.C;
 
-local function throw_error(...)
-    spi.disconnect()
-    error(...)
-end
+local throw_error = spi.throw_error
 
 local trigger_event = {
     when ={

@@ -2,33 +2,37 @@ local ffi = require('ffi')
 local C = ffi.C
 local to_lua = require('pllj.io').to_lua
 local to_pg =require('pllj.io').to_pg
-local NULL = require('pllj.pg.c').NULL
+local NULL = ffi.NULL
+local table_new = require('table.new')
 
 local isNull = ffi.new("bool[?]", 1)
 local function tuple_to_lua_1array(tupleDesc, tuple)
-        local row = {}
-        local natts = tupleDesc.natts
-        for k = 0, natts-1 do
-            local attnum = tupleDesc.attrs[k].attnum;
-            local atttypid = tupleDesc.attrs[k].atttypid;
-            --local val = C.SPI_getbinval(tuple, tupleDesc, k, isNull)
-            --print(tuple, attnum, tupleDesc,  isNull)
-            local val = C.pllj_heap_getattr(tuple, attnum, tupleDesc,  isNull)
-            local not_null = isNull[0] == false
-            if not_null then
-                row[k+1] = to_lua(atttypid)(val)
-            else
-                row[k+1] = NULL
-            end
-
+    local natts = tupleDesc.natts
+    local row = table_new(natts, 0)
+    
+    for k = 0, natts-1 do
+        local attnum = tupleDesc.attrs[k].attnum;
+        local atttypid = tupleDesc.attrs[k].atttypid;
+        --local val = C.SPI_getbinval(tuple, tupleDesc, k, isNull)
+        --print(tuple, attnum, tupleDesc,  isNull)
+        local val = C.pllj_heap_getattr(tuple, attnum, tupleDesc,  isNull)
+        local not_null = isNull[0] == false
+        if not_null then
+            row[k+1] = to_lua(atttypid)(val)
+        else
+            row[k+1] = NULL
         end
-        return row
+
+    end
+    return row
 end
 
 
 local function tuple_to_lua_table(tupleDesc, tuple)
-    local row = {}
+
     local natts = tupleDesc.natts
+    local row = table_new(0, natts)
+    
     for k = 0, natts-1 do
         local attr = tupleDesc.attrs[k]
 

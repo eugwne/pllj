@@ -2,10 +2,15 @@ local ffi = require('ffi')
 local C = ffi.C
 require('pllj.pg.init_c')
 local macro = require('pllj.pg.macro')
+local NULL = ffi.NULL
 
 local datumfor = {}
 
-datumfor[C.TEXTOID] = function (v)
+datumfor[C.TEXTOID] = function (v , p_isnull, null_index)
+    if v == nil or v == NULL then
+        p_isnull[null_index or 0] = true
+        return ffi.cast('Datum', 0)
+    end
     local length = #v
     local varsize = C.VARHDRSZ + length
     local out_ptr = C.SPI_palloc(varsize)

@@ -4,7 +4,7 @@ local ffi = require('ffi')
 
 local C = ffi.C;
 
-local NULL = require('pllj.pg.c').NULL
+local NULL = ffi.NULL
 
 local pgdef = require('pllj.pgdefines')
 
@@ -62,7 +62,13 @@ function spi.disconnect()
     C.SPI_finish()
 end
 
+local function throw_error(...)
+    spi.disconnect()
+    error(...)
+end
+
 spi.connect = connect
+spi.throw_error = throw_error
 
 
 return spi
