@@ -2,12 +2,14 @@ local ffi = require('ffi')
 local C = ffi.C
 require('pllj.pg.init_c')
 local macro = require('pllj.pg.macro')
+local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
 
 local typeto = {}
 
 
 typeto[C.TEXTOID] = function (datum)
-    local d = C.DirectFunctionCall1Coll(C.textout, 0, datum)
+    --local d = C.DirectFunctionCall1Coll(C.textout, C.InvalidOid, datum)
+    local d = call_pg_variadic(C.textout, {datum})
     return ffi.string(ffi.cast('Pointer', d))
 end
 

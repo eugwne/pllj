@@ -18,6 +18,7 @@
 #include <catalog/pg_type.h> 
 #include <executor/spi.h> 
 #include <catalog/pg_attribute.h> 
+#include <catalog/pg_language.h> 
 #include <access/tupdesc.h>
 #include <utils/syscache.h>
 #include <utils/lsyscache.h>
@@ -28,6 +29,7 @@
 #include <commands/trigger.h>
 
 #include <parser/parse_type.h>
+#include <funcapi.h> 
 
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
@@ -232,9 +234,16 @@ cdecl_func(get_namespace_name)
 
 cdecl_func(heap_form_tuple)
 
-#define SIZEOF_DATUM ((int32) sizeof(Datum))
+#ifndef SIZEOF_DATUM
+    #define SIZEOF_DATUM ((int32) sizeof(Datum))
+#endif
+
 cdecl_const(SIZEOF_DATUM)
-#define SIZEOF_BOOL ((int32) sizeof(bool))
+
+#ifndef SIZEOF_BOOL
+    #define SIZEOF_BOOL ((int32) sizeof(bool))
+#endif
+
 cdecl_const(SIZEOF_BOOL)
 
 cdecl_func(palloc)
@@ -257,3 +266,12 @@ cdecl_const(VOIDOID)
 //cdecl_func(stringToQualifiedNameList)
 cdecl_func(parseTypeString)
 cdecl_func(InputFunctionCall)
+//cdecl_func(regprocedurein)
+cdecl_func(to_regprocedure)
+
+cdecl_const(InvalidOid)
+cdecl_const(INTERNALlanguageId)
+cdecl_func(get_func_arg_info)
+
+cdecl_const(HEAP_XMIN_FROZEN)
+

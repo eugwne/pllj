@@ -1,13 +1,9 @@
-local band = require("bit").band
-local lshift = require("bit").lshift
-
 local ffi = require('ffi')
 local C = ffi.C
 
+local band = require("bit").band
+local lshift = require("bit").lshift
 
-local HEAP_XMIN_COMMITTED	=	0x0100	--/* t_xmin committed */
-local HEAP_XMIN_INVALID	=	0x0200	--/* t_xmin invalid/aborted */
-local HEAP_XMIN_FROZEN = band(HEAP_XMIN_COMMITTED,HEAP_XMIN_INVALID)
 
 local function GETSTRUCT(TUP)
   local addr = ffi.cast("intptr_t", (TUP).t_data)
@@ -28,6 +24,15 @@ local function GET_2_BYTES(X)
   return (band(ffi.cast('Datum', X), 0x0000ffff))
 end
 
+local function GET_4_BYTES(X)
+    --(((Datum) (value)) & 0x0000ffff)
+    return (band(ffi.cast('Datum', X), 0xffffffff))
+end
+
+local function DatumGetObjectId(X)
+    return ffi.cast('Oid', GET_4_BYTES(X))
+end
+
 
 local function ObjectIdGetDatum(X)
   return ffi.cast('Datum', SET_4_BYTES(X))
@@ -35,7 +40,7 @@ end
 
 local function HeapTupleHeaderXminFrozen(tup)
   --((tup)->t_infomask & (HEAP_XMIN_FROZEN)) == HEAP_XMIN_FROZEN 
-  return (band(tup.t_infomask ,HEAP_XMIN_FROZEN) == HEAP_XMIN_FROZEN )
+  return (band(tup.t_infomask ,C.HEAP_XMIN_FROZEN) == C.HEAP_XMIN_FROZEN )
 end
 
 local function DatumGetArrayTypeP(X)
@@ -66,6 +71,30 @@ local function SET_VARSIZE(PTR, len)
 end
 
 
+local function PointerGetDatum(X) 
+    return ffi.cast('Datum', X)
+end
+
+local function CStringGetDatum(X) 
+    return PointerGetDatum(ffi.cast('const char *',X))
+end
+
+local function InitFunctionCallInfoData(Fcinfo, Flinfo, Nargs, Collation, Context, Resultinfo)
+    (Fcinfo).flinfo = (Flinfo);
+    (Fcinfo).context = (Context);
+    (Fcinfo).resultinfo = (Resultinfo);
+    (Fcinfo).fncollation = (Collation);
+    (Fcinfo).isnull = false;
+    (Fcinfo).nargs = (Nargs);
+end
+
+local function FunctionCallInvoke(fcinfo)
+    local fptr = ffi.cast('PGFunction', fcinfo.flinfo.fn_addr)
+    --TODO: try catch ?
+    return fptr(fcinfo)
+end
+
+
 return {
   GETSTRUCT = GETSTRUCT,
   PG_DETOAST_DATUM = PG_DETOAST_DATUM,
@@ -77,4 +106,8 @@ return {
   HeapTupleHeaderGetXmin = HeapTupleHeaderGetXmin,
   GET_2_BYTES = GET_2_BYTES,
   SET_VARSIZE = SET_VARSIZE,
+  DatumGetObjectId = DatumGetObjectId,
+  CStringGetDatum = CStringGetDatum,
+  InitFunctionCallInfoData = InitFunctionCallInfoData,
+  FunctionCallInvoke = FunctionCallInvoke,
 }

@@ -1,11 +1,13 @@
+require('pllj.pg.init_c')
+
 local pllj = {}
 
 local function_cache = {}
 
 local ffi = require('ffi')
-require('pllj.pg.init_c')
 
-local NULL = require('pllj.pg.c').NULL
+
+local NULL = ffi.NULL
 
 local pgdef = require('pllj.pgdefines')
 
@@ -15,6 +17,7 @@ pllj._VERSION = "pllj 0.1"
 ffi.cdef [[
 void set_pllj_call_result(Datum result);
 bool lj_CALLED_AS_TRIGGER (void* fcinfo);
+Oid lj_HeapTupleGetOid(HeapTuple pht);
 ]]
 
 local C = ffi.C;
@@ -27,10 +30,7 @@ end
 
 local spi = require('pllj.spi')
 
-local function throw_error(...)
-    spi.disconnect()
-    error(...)
-end
+local throw_error = spi.throw_error
 
 local function error_xcall(err)
     if type(err) == "table" then
@@ -64,7 +64,7 @@ local get_func_from_oid = pllj_func.get_func_from_oid
 local need_update = pllj_func.need_update
 
 local to_lua = require('pllj.io').to_lua
-local to_pg =require('pllj.io').to_pg
+local to_pg = require('pllj.io').to_pg
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
 

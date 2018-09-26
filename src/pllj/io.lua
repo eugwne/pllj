@@ -1,9 +1,9 @@
-local typeto = require('pllj.pg.to_lua').typeto
-
-local datumfor = require('pllj.pg.to_pg').datumfor
-
 local ffi = require('ffi')
 local C = ffi.C
+
+local typeto = require('pllj.pg.to_lua').typeto
+local datumfor = require('pllj.pg.to_pg').datumfor
+
 local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 
 local raw_datum = {

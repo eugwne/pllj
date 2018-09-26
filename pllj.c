@@ -63,6 +63,11 @@ extern ErrorData  *last_edata;
 ErrorData  *last_edata = NULL;
 #define THROW_NUMBER (-1000)
 
+extern Oid lj_HeapTupleGetOid(HeapTuple pht); 
+Oid lj_HeapTupleGetOid(HeapTuple pht){
+    return HeapTupleGetOid(pht);
+}
+
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int lj_SPI_execute(const char *src, bool read_only, long tcount) {
 	int result = 0;
