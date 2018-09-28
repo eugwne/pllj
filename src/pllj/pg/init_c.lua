@@ -10,4 +10,5 @@ ffi.cdef[[
 int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int call_depth;
 Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
+Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
 ]]

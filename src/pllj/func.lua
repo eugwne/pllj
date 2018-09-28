@@ -10,7 +10,7 @@ local to_pg = require('pllj.io').to_pg
 local to_lua = require('pllj.io').to_lua
 local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
 local lj_lang_oid = require('pllj.pg.func').find_lang_oid('pllj')
-local make_cleanup = require('pllj.misc').execute_list
+local pg_error = require('pllj.pg.pg_error')
 
 local Deferred = require('pllj.misc').Deferred
 
@@ -143,12 +143,12 @@ end
 
 local function find_function( value, opt )
     local prev = C.CurrentMemoryContext
-    local error_text
     local d = Deferred.create()
     local opt = opt or {}
     local funcoid = C.InvalidOid
-    local reg_name
-    local argtypes, argnames, argmodes, argc, lf, finfo, func
+
+    local error_text, reg_name, argtypes, argnames, argmodes, argc, lf, finfo, func
+    local _isok
     if type(value) == 'number' then
         funcoid = value
     elseif type(value) == 'string' then
@@ -215,6 +215,7 @@ local function find_function( value, opt )
 
     finfo = ffi.new('struct FunctionCallInfoData')
     
+    _isok = ffi.new("bool[?]", 1)
     func = function(...)
         macro.InitFunctionCallInfoData(finfo, lf.fi, argc, C.InvalidOid, nil, nil)
         for i = 0, lf.argc - 1 do
@@ -222,8 +223,14 @@ local function find_function( value, opt )
             finfo.arg[i] = to_pg(argtypes[0][i])(value, finfo.argnull, i)
         end
 
-        --TODO: try catch
-        local result = macro.FunctionCallInvoke(finfo)
+        --macro has no try catch
+        --local result = macro.FunctionCallInvoke(finfo)
+        _isok[0] = true
+        local result = C.lj_FunctionCallInvoke(finfo, _isok)
+        if _isok[0] == false then
+            local e = pg_error.get_exception_text()
+            return throw_error("exec[".. (reg_name or funcoid).."] error:"..e)
+        end
         if finfo.isnull == true then
             return nil
         end

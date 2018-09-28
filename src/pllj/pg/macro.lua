@@ -88,7 +88,7 @@ local function InitFunctionCallInfoData(Fcinfo, Flinfo, Nargs, Collation, Contex
     (Fcinfo).nargs = (Nargs);
 end
 
-local function FunctionCallInvoke(fcinfo)
+local function FunctionCallInvoke(fcinfo) --
     local fptr = ffi.cast('PGFunction', fcinfo.flinfo.fn_addr)
     --TODO: try catch ?
     return fptr(fcinfo)

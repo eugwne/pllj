@@ -68,9 +68,24 @@ Oid lj_HeapTupleGetOid(HeapTuple pht){
     return HeapTupleGetOid(pht);
 }
 
+extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
+extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+        return FunctionCallInvoke(fcinfo);
+    }PG_CATCH(); {
+        MemoryContextSwitchTo(oldcontext);
+        *isok = false;
+        last_edata = CopyErrorData();
+        FlushErrorState();
+    } PG_END_TRY();
+    return 0;
+}
+
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int lj_SPI_execute(const char *src, bool read_only, long tcount) {
-	int result = 0;
+	volatile int result = 0;
 	MemoryContext oldcontext = CurrentMemoryContext;
 	PG_TRY();
 	{
@@ -281,10 +296,8 @@ PGDLLEXPORT Datum _PG_init(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum _PG_fini(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum pllj_validator(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum pllj_call_handler(PG_FUNCTION_ARGS);
-
-#if PG_VERSION_NUM >= 90000
 PGDLLEXPORT Datum pllj_inline_handler(PG_FUNCTION_ARGS);
-#endif
+
 
 PG_FUNCTION_INFO_V1(_PG_init);
 Datum _PG_init(PG_FUNCTION_ARGS) {
@@ -334,7 +347,6 @@ Datum pllj_call_handler(PG_FUNCTION_ARGS) {
 	return lj_callhandler(fcinfo);
 }
 
-#if PG_VERSION_NUM >= 90000
 #define CODEBLOCK \
 	((InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0)))->source_text
 
@@ -343,4 +355,4 @@ PG_FUNCTION_INFO_V1(pllj_inline_handler);
 Datum pllj_inline_handler(PG_FUNCTION_ARGS) {
 	return lj_inlinehandler(CODEBLOCK);
 }
-#endif
+
