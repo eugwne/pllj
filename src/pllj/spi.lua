@@ -8,7 +8,10 @@ local NULL = ffi.NULL
 
 local pgdef = require('pllj.pgdefines')
 
-
+local function throw_error(...)
+    spi.disconnect()
+    error(...)
+end
 
 local function connect()
   
@@ -62,10 +65,7 @@ function spi.disconnect()
     C.SPI_finish()
 end
 
-local function throw_error(...)
-    spi.disconnect()
-    error(...)
-end
+
 
 spi.connect = connect
 spi.throw_error = throw_error
