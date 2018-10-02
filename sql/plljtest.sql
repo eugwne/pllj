@@ -126,3 +126,42 @@ CREATE TRIGGER bi_table_1 BEFORE INSERT OR UPDATE OR DELETE ON table_1
 insert into table_1 (column_1) values(5);
 insert into table_1 (column_1) values(15);
 select column_1 from table_1 order by 1;
+
+do $$
+    local spi = require("pllj.spi")
+    local plan = spi.prepare("select * from generate_series($1,$2);", {"bigint", "bigint"})
+    local result = plan:exec(4, 7)
+
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ language pllj;
+
+CREATE or replace FUNCTION pg_temp.add(integer, integer) RETURNS integer
+AS 'select $1 + $2;'
+LANGUAGE SQL;
+
+do $$
+    local spi = require("pllj.spi")
+    _G.plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"})
+$$ language pllj;
+
+do $$
+    local result = plan:exec(4, 7)
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ language pllj;
+
+drop function pg_temp.add(integer, integer);
+
+do $$
+    local _, e = pcall(plan.exec, plan, 4, 7)
+    print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
+$$ language pllj;
+
+do $$
+    local spi = require("pllj.spi")
+    local _, e = pcall(spi.execute, "select * from pg_temp.add(1,2);")
+    print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
+$$ language pllj;

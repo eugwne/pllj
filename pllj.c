@@ -69,7 +69,7 @@ Oid lj_HeapTupleGetOid(HeapTuple pht){
 }
 
 extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
-extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
+Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
@@ -85,18 +85,54 @@ extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
 
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int lj_SPI_execute(const char *src, bool read_only, long tcount) {
-	volatile int result = 0;
-	MemoryContext oldcontext = CurrentMemoryContext;
-	PG_TRY();
-	{
-		result = SPI_execute(src, read_only, tcount);
-	}PG_CATCH();	{
-		MemoryContextSwitchTo(oldcontext);
-		last_edata = CopyErrorData();
-		FlushErrorState();
-		result = THROW_NUMBER;
-	}PG_END_TRY();
-	return result;
+    volatile int result = 0;
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+        result = SPI_execute(src, read_only, tcount);
+    }PG_CATCH();    {
+        MemoryContextSwitchTo(oldcontext);
+        last_edata = CopyErrorData();
+        FlushErrorState();
+        result = THROW_NUMBER;
+        SPI_restore_connection();
+    }PG_END_TRY();
+    return result;
+}
+
+extern int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
+                     bool read_only, long count);
+int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
+                     bool read_only, long count) {
+    volatile int result = 0;
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+        result = SPI_execute_plan(plan, values, nulls, read_only, count);
+    }PG_CATCH();    {
+        MemoryContextSwitchTo(oldcontext);
+        last_edata = CopyErrorData();
+        FlushErrorState();
+        result = THROW_NUMBER;
+        SPI_restore_connection();
+    }PG_END_TRY();
+    return result;
+}
+
+
+
+extern SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
+SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions){
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+        return SPI_prepare_cursor(src, nargs, argtypes, cursorOptions);
+    }PG_CATCH();	{
+        MemoryContextSwitchTo(oldcontext);
+        last_edata = CopyErrorData();
+        FlushErrorState();
+    }PG_END_TRY();
+    return 0;
 }
 
 extern bool lj_CALLED_AS_TRIGGER (void* fcinfo);

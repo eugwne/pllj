@@ -268,10 +268,16 @@ cdecl_func(parseTypeString)
 cdecl_func(InputFunctionCall)
 //cdecl_func(regprocedurein)
 cdecl_func(to_regprocedure)
+cdecl_func(to_regtype)
 
 cdecl_const(InvalidOid)
 cdecl_const(INTERNALlanguageId)
 cdecl_func(get_func_arg_info)
 
 cdecl_const(HEAP_XMIN_FROZEN)
+cdecl_type(SPIPlanPtr)
+cdecl_func(SPI_prepare_cursor)
+cdecl_func(SPI_keepplan)
+cdecl_func(SPI_freeplan)
+
 
