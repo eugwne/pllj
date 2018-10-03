@@ -193,3 +193,42 @@ select column_1 from table_1 order by 1;
        30
 (2 rows)
 
+do $$
+    local spi = require("pllj.spi")
+    local plan = spi.prepare("select * from generate_series($1,$2);", {"bigint", "bigint"})
+    local result = plan:exec(4, 7)
+
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ language pllj;
+INFO:  4LL
+INFO:  5LL
+INFO:  6LL
+INFO:  7LL
+CREATE or replace FUNCTION pg_temp.add(integer, integer) RETURNS integer
+AS 'select $1 + $2;'
+LANGUAGE SQL;
+do $$
+    local spi = require("pllj.spi")
+    _G.plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"})
+$$ language pllj;
+do $$
+    local result = plan:exec(4, 7)
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ language pllj;
+INFO:  11
+drop function pg_temp.add(integer, integer);
+do $$
+    local _, e = pcall(plan.exec, plan, 4, 7)
+    print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
+$$ language pllj;
+INFO:  true
+do $$
+    local spi = require("pllj.spi")
+    local _, e = pcall(spi.execute, "select * from pg_temp.add(1,2);")
+    print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
+$$ language pllj;
+INFO:  true
