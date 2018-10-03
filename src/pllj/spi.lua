@@ -66,8 +66,6 @@ function spi.execute(query)
     result = C.lj_SPI_execute(query, 0, 0)
     --catch
     return process_query_result(result)
-
-
 end
 
 local function exec_plan(prepared_plan, ...)
@@ -76,8 +74,9 @@ local function exec_plan(prepared_plan, ...)
     local values = ffi.new("Datum [?]", argc)
     local nulls = ffi.new("char [?]", argc)
     local has_nulls = false
+    local args = {...}
     for i = 0, argc-1 do
-        local v = select(i+1, ...)
+        local v = args[i+1]
         if v and v ~= ffi.NULL then
             nulls[i] = string.byte(' ')
             values[i] = to_pg(oids[i])(v)
@@ -99,14 +98,15 @@ local plan_mt = {
     },
   }
 
-function spi.prepare(query, arg_types)
-    local argc = #arg_types
+function spi.prepare(query, ...)
+    local argc = select('#', ...)
+    local arg_types = {...}
     local oids = ffi.new("Oid [?]", argc)
     for i = 1, argc do
         local oid = call_pg_variadic(C.to_regtype, {text_to_pg(arg_types[i])})
         oids[i-1] = oid
     end
-    local plan = C.lj_SPI_prepare_cursor(query, #arg_types, oids, 0)
+    local plan = C.lj_SPI_prepare_cursor(query, argc, oids, 0)
     if plan == nil then
         return error("SPI_prepare_cursor error:"..pg_error.get_exception_text())
     end
