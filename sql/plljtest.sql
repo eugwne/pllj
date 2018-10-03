@@ -129,7 +129,7 @@ select column_1 from table_1 order by 1;
 
 do $$
     local spi = require("pllj.spi")
-    local plan = spi.prepare("select * from generate_series($1,$2);", {"bigint", "bigint"})
+    local plan = spi.prepare("select * from generate_series($1,$2);", "bigint", "bigint")
     local result = plan:exec(4, 7)
 
     for _, row in ipairs(result) do
@@ -143,7 +143,7 @@ LANGUAGE SQL;
 
 do $$
     local spi = require("pllj.spi")
-    _G.plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"})
+    _G.plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer")
 $$ language pllj;
 
 do $$
@@ -164,4 +164,26 @@ do $$
     local spi = require("pllj.spi")
     local _, e = pcall(spi.execute, "select * from pg_temp.add(1,2);")
     print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
+$$ language pllj;
+
+do $$
+    local spi = require("pllj.spi")
+    local plan = spi.prepare("select $1 as a, $2 as b,  $3 as c", "integer", "integer", "integer")
+    local result = plan:exec(4, nil, 7)
+for _, row in ipairs(result) do
+	for _, col in ipairs(row) do
+		print (col)
+	end
+end
+$$ language pllj;
+
+do $$
+    local spi = require("pllj.spi")
+
+    local result = spi.execute("select 1 as a, null as b, 3 as c")
+for _, row in ipairs(result) do
+	for _, col in ipairs(row) do
+		print (col)
+	end
+end
 $$ language pllj;
