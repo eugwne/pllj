@@ -14,23 +14,15 @@ local pgdef = require('pllj.pgdefines')
 pllj._DESCRIPTION = "LuaJIT FFI postgres language extension"
 pllj._VERSION = "pllj 0.1"
 
-ffi.cdef [[
-void set_pllj_call_result(Datum result);
-bool lj_CALLED_AS_TRIGGER (void* fcinfo);
-Oid lj_HeapTupleGetOid(HeapTuple pht);
-]]
 
 local C = ffi.C;
-
-
-print = function(text)
-    C.errstart(pgdef.elog["INFO"], "", 0, nil, nil)
-    C.errfinish(C.errmsg(tostring(text)))
-end
 
 local spi = require('pllj.spi')
 
 local throw_error = spi.throw_error
+
+require('pllj.func') 
+local env = require('pllj.env').env
 
 local function error_xcall(err)
     if type(err) == "table" then
@@ -141,7 +133,7 @@ end
 function pllj.inlinehandler(...)
     spi.connect()
     local text = select(1, ...)
-    local f, err = loadstring(text)
+    local f, err = loadstring(text, nil, "t", env)
     if (f) then
         exec(f)
     else

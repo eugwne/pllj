@@ -16,6 +16,9 @@ local Deferred = require('pllj.misc').Deferred
 
 local throw_error = require('pllj.spi').throw_error
 
+local env = require('pllj.env').env
+local box = require('pllj.env').box
+
 local function get_func_from_oid(oid)
     local isNull = ffi.new("bool[?]", 1)
     local proc = C.SearchSysCache(syscache.enum.PROCOID, macro.ObjectIdGetDatum(oid), 0, 0, 0);
@@ -92,7 +95,7 @@ local function get_func_from_oid(oid)
 
     C.ReleaseSysCache(proc)
 
-    local fn, err = loadstring(fntext)
+    local fn, err = loadstring(fntext, nil, "t", env)
 
     if not fn then
         return nil, ({ message = err, context = fntext })
@@ -118,6 +121,7 @@ local function need_update(cached)
     end
 
     local oid = cached.oid
+    --TODO cache function for userid
     local user_id = C.GetUserId()
 
     if user_id ~= cached.user_id then
@@ -251,10 +255,27 @@ local function find_function( value, opt )
     end
 
 end
+rawset(box, "find_function", find_function)
+
+--TODO: change it
+local _saved_functions = {}
+local function save_function(value, opt)
+    local result = find_function(value, opt)
+    _saved_functions[value] = result
+    return result
+end
+rawset(box, "save_function", save_function)
+
+local function load_function(value)
+    return _saved_functions[value]
+end
+rawset(box, "load_function", load_function)
 
 
 return {
     find_function = find_function,
     get_func_from_oid = get_func_from_oid,
-    need_update = need_update
+    need_update = need_update,
+    save_function = save_function,
+    load_function = load_function,
 }
