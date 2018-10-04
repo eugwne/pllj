@@ -5,7 +5,6 @@ $$ language pllj;
 INFO:  Hello LuaJIT FFI
 create table pg_temp.test(txt text);
 do $$
-local spi = require("pllj.spi")
 spi.execute("insert into pg_temp.test(txt) values('qwerty')")
 $$ language pllj;
 select * from pg_temp.test;
@@ -15,7 +14,6 @@ select * from pg_temp.test;
 (1 row)
 
 do $$
-local spi = require("pllj.spi")
 local result = spi.execute("select null union all select generate_series(7,9)")
 for _, row in ipairs(result) do
 	for _, col in ipairs(row) do
@@ -52,7 +50,6 @@ CREATE OR REPLACE FUNCTION public.sum_values(a integer, b integer, c integer)
   RETURNS integer AS
 $$ return a+b+c $$ language pllj;
 do $$
-local spi = require("pllj.spi")
 for i = 5,10 do
 local result = spi.execute(string.format ("select sum_values(%s,%s,%s)", i, i*2, i*3))
 print(result[1][1])
@@ -68,7 +65,6 @@ CREATE OR REPLACE FUNCTION public.rec_spi(n integer)
   RETURNS integer AS
 $BODY$
 local function call_spi(value)
-	local spi = require("pllj.spi")
 	local result = spi.execute(string.format ("select rec_spi(%s)", value))
 	return(result[1][1])
 end
@@ -194,7 +190,6 @@ select column_1 from table_1 order by 1;
 (2 rows)
 
 do $$
-    local spi = require("pllj.spi")
     local plan = spi.prepare("select * from generate_series($1,$2);", "bigint", "bigint")
     local result = plan:exec(4, 7)
 
@@ -210,10 +205,10 @@ CREATE or replace FUNCTION pg_temp.add(integer, integer) RETURNS integer
 AS 'select $1 + $2;'
 LANGUAGE SQL;
 do $$
-    local spi = require("pllj.spi")
-    _G.plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer")
+    spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('plan pg_temp.add')
 $$ language pllj;
 do $$
+    local plan = spi.find_plan('plan pg_temp.add')
     local result = plan:exec(4, 7)
     for _, row in ipairs(result) do
       print(unpack(row))
@@ -222,18 +217,17 @@ $$ language pllj;
 INFO:  11
 drop function pg_temp.add(integer, integer);
 do $$
+    local plan = spi.find_plan('plan pg_temp.add')
     local _, e = pcall(plan.exec, plan, 4, 7)
     print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
 $$ language pllj;
 INFO:  true
 do $$
-    local spi = require("pllj.spi")
     local _, e = pcall(spi.execute, "select * from pg_temp.add(1,2);")
     print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
 $$ language pllj;
 INFO:  true
 do $$
-    local spi = require("pllj.spi")
     local plan = spi.prepare("select $1 as a, $2 as b,  $3 as c", "integer", "integer", "integer")
     local result = plan:exec(4, nil, 7)
 for _, row in ipairs(result) do
@@ -246,7 +240,6 @@ INFO:  4
 INFO:  cdata<void *>: NULL
 INFO:  7
 do $$
-    local spi = require("pllj.spi")
 
     local result = spi.execute("select 1 as a, null as b, 3 as c")
 for _, row in ipairs(result) do
@@ -258,3 +251,35 @@ $$ language pllj;
 INFO:  1
 INFO:  cdata<void *>: NULL
 INFO:  3
+do $$
+local function set_global()
+    a = 5
+end
+local _, e = pcall(set_global)
+print(string.find(e, "attempt to set global var 'a'")~=nil)
+$$ language pllj;
+INFO:  true
+do $$
+local function set_global()
+    math.pi = 5
+end
+local _, e = pcall(set_global)
+print(string.find(e, "attempt to set var 'pi'")~=nil)
+$$ language pllj;
+INFO:  true
+do $$
+local function set_global()
+    math = {}
+end
+local _, e = pcall(set_global)
+print(string.find(e, "attempt to set global var 'math'")~=nil)
+$$ language pllj;
+INFO:  true
+do $$
+local function set_global()
+    find_function = nil
+end
+local _, e = pcall(set_global)
+print(string.find(e, "attempt to set global var 'find_function'")~=nil)
+$$ language pllj;
+INFO:  true

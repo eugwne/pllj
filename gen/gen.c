@@ -280,4 +280,11 @@ cdecl_func(SPI_prepare_cursor)
 cdecl_func(SPI_keepplan)
 cdecl_func(SPI_freeplan)
 
+cdecl_const(LOG)
+cdecl_const(INFO)
+cdecl_const(NOTICE)
+cdecl_const(WARNING)
+cdecl_const(ERROR)
+cdecl_const(FATAL)
+cdecl_const(PANIC)
 

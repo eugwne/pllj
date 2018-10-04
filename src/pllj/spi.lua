@@ -32,6 +32,8 @@ local to_pg = require('pllj.io').to_pg
 
 local tuple_to_lua_1array = require('pllj.tuple_ops').tuple_to_lua_1array
 
+local _private = setmetatable({}, {__mode = "k"}) 
+
 
 local function process_query_result(result)
     if (result < 0) then
@@ -68,7 +70,18 @@ function spi.execute(query)
     return process_query_result(result)
 end
 
-local function exec_plan(prepared_plan, ...)
+--TODO remake it
+local _saved_plans = {}
+local function save_as(self, name)
+    _saved_plans[name] = self
+end
+
+function spi.find_plan(name)
+    return _saved_plans[name]
+end
+
+local function exec_plan(self, ...)
+    local prepared_plan = _private[self]
     local argc = prepared_plan.argc
     local oids = prepared_plan.oids
     local values = ffi.new("Datum [?]", argc)
@@ -95,6 +108,7 @@ end
 local plan_mt = {
     __index = {
         exec = exec_plan,
+        save_as = save_as
     },
   }
 
@@ -113,7 +127,8 @@ function spi.prepare(query, ...)
     assert(C.SPI_keepplan(plan)==0)
 
     ffi.gc(plan, C.SPI_freeplan)
-    local prepared_plan = {plan = plan, oids = oids, argc = argc}
+    local prepared_plan = {}
+    _private[prepared_plan] = {plan = plan, oids = oids, argc = argc}
     setmetatable(prepared_plan, plan_mt)
 
     return prepared_plan
