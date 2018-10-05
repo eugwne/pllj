@@ -23,6 +23,18 @@ function Deferred:call()
     execute_list(self.list)
 end
 
+local function protect(t)
+    local mt = {
+        __index = t,
+        __newindex = function (self, var)
+            return error(string.format( "attempt to set var '%s'", var))
+        end
+    }
+    local env = {}
+    return setmetatable(env, mt) 
+end
+
 return { 
     Deferred = Deferred,
+    protect = protect,
  }

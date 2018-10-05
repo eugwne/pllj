@@ -29,3 +29,15 @@ do $$
     local _, e = pcall(get_json)
     print(string.find(e, "cache lookup failed for function")~=nil)
 $$ language pllj;
+
+CREATE or replace FUNCTION pg_temp.concat_3(text, text, text) RETURNS text
+AS 'select quote_nullable($1) || quote_nullable($2) || quote_nullable($3);'
+LANGUAGE SQL;
+
+do $$
+local fn = find_function('pg_temp.concat_3(text, text, text)')
+print(fn('1'))
+print(fn('1',nil,'3'))
+print(fn('1','2','3'))
+print(fn(nil,'2','3'))
+$$ language pllj;

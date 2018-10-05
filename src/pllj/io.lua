@@ -6,9 +6,12 @@ local datumfor = require('pllj.pg.to_pg').datumfor
 
 local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 
+local _private = setmetatable({}, {__mode = "k"}) 
+
 local raw_datum = {
     __tostring = function(self)
-        local charPtr = C.OutputFunctionCall(self.output, self.datum)
+        local value = _private[self]
+        local charPtr = C.OutputFunctionCall(value.output, value.datum)
         return ffi.string(charPtr)
     end
 }
@@ -26,7 +29,8 @@ local function create_converter_tolua(oid)
         C.fmgr_info_cxt(typeinfo.typoutput, output, C.TopMemoryContext);
 
         result = function (datum)
-            local value = {
+            local value = {}
+            _private[value] = {
                 datum = datum,
                 oid = oid,
                 typeinfo = typeinfo,
@@ -67,7 +71,7 @@ local function create_converter_topg(oid)
 
                 return datum
             elseif (type(value) == "table" and getmetatable(value) == raw_datum) then
-                return value.datum
+                return _private[value].datum
             end
         end
     end

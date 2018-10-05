@@ -6,9 +6,12 @@ local NULL = ffi.NULL
 
 local datumfor = {}
 
-datumfor[C.TEXTOID] = function (v , p_isnull, null_index)
+datumfor[C.TEXTOID] = function (v , p_isnull)
     if v == nil or v == NULL then
-        p_isnull[null_index or 0] = true
+        if (p_isnull ~=nil) then
+            p_isnull[0] = true
+        end
+
         return ffi.cast('Datum', 0)
     end
     local length = #v
