@@ -221,10 +221,11 @@ local function find_function( value, opt )
     
     _isok = ffi.new("bool[?]", 1)
     func = function(...)
+        local args = {...}
         macro.InitFunctionCallInfoData(finfo, lf.fi, argc, C.InvalidOid, nil, nil)
+        ffi.fill(finfo.argnull, lf.argc)
         for i = 0, lf.argc - 1 do
-            local value = select(i+1, ...)
-            finfo.arg[i] = to_pg(argtypes[0][i])(value, finfo.argnull, i)
+            finfo.arg[i] = to_pg(argtypes[0][i])(args[i+1], finfo.argnull + i)
         end
 
         --macro has no try catch

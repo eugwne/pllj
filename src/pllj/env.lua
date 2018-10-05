@@ -1,18 +1,8 @@
 local spi = require("pllj.spi")
 local NULL = require('ffi').NULL
+local protect = require('pllj.misc').protect
 
 --from http://lua-users.org/wiki/SandBoxes 
-
-local function protect(t)
-    local mt = {
-        __index = t,
-        __newindex = function (self, var,  ... )
-            return error(string.format( "attempt to set var '%s'", var))
-        end
-    }
-    local env = {}
-    return setmetatable(env, mt) 
-end
 
 local _coroutine = {
     create = coroutine.create,
