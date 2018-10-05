@@ -19,6 +19,7 @@ PG_MODULE_MAGIC;
 #include <luajit.h>
 
 #define out(...) ereport(INFO, (errmsg(__VA_ARGS__)))
+#define warning(...) ereport(WARNING, (errmsg(__VA_ARGS__)))
 #define pg_throw(...) ereport(ERROR, (errmsg(__VA_ARGS__)))
 #define pg_throw_pllj_detail(err) do{\
     ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), \
@@ -37,6 +38,9 @@ PG_MODULE_MAGIC;
     luatable_report(L, ERROR);\
     }\
     }while(0)
+
+#define CODEBLOCK \
+    ((InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0)))->source_text
 
 static void pllj_parse_error(lua_State *L, ErrorData *edata){
     edata->message = NULL;
@@ -180,12 +184,6 @@ static int validator_ref = 0;
 extern volatile int call_depth;
 volatile int call_depth = 0;
 
-static volatile Datum call_result;
-extern void set_pllj_call_result(Datum result);
-void set_pllj_call_result(Datum result){
-    call_result = result;
-}
-
 static lua_State *get_temp_state(){
     int status;
     lua_State *LT;
@@ -230,129 +228,56 @@ static lua_State * push_vm() {
 
 }
 
-static void pop_vm(volatile lua_State * state){
+static void pop_vm(lua_State * state){
     if(call_depth > SAVED_VM) {
         lua_close(state);
     }
     --call_depth;
 }
 
-
-static Datum lj_validator (Oid oid) {
-    char	*error_text = NULL;
-    int status = 0;
-    volatile lua_State *L1 = push_vm();
-
-    lua_settop(L1, 0);
-    lua_rawgeti(L1, LUA_REGISTRYINDEX, validator_ref);
-    lua_pushnumber(L1, oid);
-    PG_TRY();{
-        status = lua_pcall(L1, 1, 0, 0);
-        if (status == LUA_ERRMEM || status == LUA_ERRERR ) {
-            error_text = pstrdup(lua_tostring(L1, -1));
-        }
-        pop_vm(L1);
-    }PG_CATCH();{
-        out("TODO check vm is ok");
-        pop_vm(L1);
-        PG_RE_THROW();
-    }PG_END_TRY();
-
-    if (status == 0){
-        PG_RETURN_VOID();
-    }
-    if( status == LUA_ERRRUN) {
-        if (call_depth > 0) {
-            pg_throw("FIXME! error not converted");//luapg_error(L1);
-        }else{
-            luapg_error(L1);
-        }
-    } else if (status == LUA_ERRMEM) {
-        pg_throw("%s %s","Memory error:",lua_tostring(L1, -1));
-    } else if (status == LUA_ERRERR) {
-        pg_throw("%s %s","Error:",lua_tostring(L1, -1));
-    }
-
-    pg_throw("pllj unknown error");
-}
+typedef struct LJFunctionData {
+    FunctionCallInfo fcinfo;
+    Datum* result;
+} LJFunctionData;
 
 
-static Datum lj_callhandler (FunctionCallInfo fcinfo) {
-    ErrorData	edata;
+static Datum lj_call (FunctionCallInfo fcinfo, int *ref) {
+    ErrorData edata;
     char *query = NULL;
     int position = 0;
     char *error_text = NULL;
+    LJFunctionData* udata;
+    Datum result = (Datum) 0;
 
     int status = 0;
 
-    lua_State *L1 = push_vm();
-    call_result = (Datum) 0;
+    int rc;
+    lua_State *L;
 
-    lua_settop(L1, 0);
-    lua_rawgeti(L1, LUA_REGISTRYINDEX, call_ref);
-    lua_pushlightuserdata(L1, (void *)fcinfo);
-    PG_TRY();{
-        status = lua_pcall(L1, 1, 0, 0);
-
-        if (status == LUA_ERRRUN) {
-            if (lua_type(L1, -1) == LUA_TSTRING){ 
-                error_text = pstrdup(lua_tostring(L1, -1));
-                lua_pop(L1, lua_gettop(L1));
-            }else {
-                pllj_parse_error(L1, &edata);
-            }
-
+    if (ref != &validator_ref) {
+        if ((rc = SPI_connect()) != SPI_OK_CONNECT) {
+            elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
         }
-        else if (status == LUA_ERRMEM || status == LUA_ERRERR ) {
-            error_text = pstrdup(lua_tostring(L1, -1));
-        }
-        pop_vm(L1);
-    }PG_CATCH();{
-        out("TODO check vm is ok");
-        pop_vm(L1);
-        PG_RE_THROW();
-    }PG_END_TRY();
-
-    if (status == 0){
-        //PG_RETURN_VOID();
-        return call_result;
     }
 
-    if( status == LUA_ERRRUN) {
-        if (error_text) {
-            pg_throw_pllj_detail(error_text);
-        }else{
-            ereport(ERROR,
-            (errcode(edata.sqlerrcode ? edata.sqlerrcode : ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-                errmsg_internal("%s", edata.message ? edata.message : "no exception data"),
-                (edata.detail) ? errdetail_internal("%s", edata.detail) : 0,
-                (edata.context) ? errcontext("%s", edata.context) : 0,
-                (edata.hint) ? errhint("%s", edata.hint) : 0,
-                (query) ? internalerrquery(query) : 0,
-                (position) ? internalerrposition(position) : 0));
-        }
-    } else if (status == LUA_ERRMEM) {
-        pg_throw("%s %s","Memory error:",error_text);
-    } else if (status == LUA_ERRERR) {
-        pg_throw("%s %s","Error:",error_text);
-    }
-
-    pg_throw("pllj unknown error");
-}
-static Datum lj_inlinehandler (const char *source) {
-    ErrorData	edata;
-    char *query = NULL;
-    int position = 0;
-    char *error_text = NULL;
-
-    volatile lua_State *L = push_vm();
-    int status = 0;
+    L = push_vm();
 
     lua_settop(L, 0);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, inline_ref);
-    lua_pushstring(L, source);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, *ref);
+
+    if (ref == &call_ref) {
+        udata = (LJFunctionData*) lua_newuserdata(L, sizeof(LJFunctionData));
+        udata->fcinfo = fcinfo;
+        udata->result = &result;
+    } else if (ref == &inline_ref) {
+        lua_pushstring(L, CODEBLOCK);
+    } else if (ref == &validator_ref) {
+        lua_pushnumber(L, PG_GETARG_OID(0));
+    }
+
     PG_TRY();{
         status = lua_pcall(L, 1, 0, 0);
+
         if (status == LUA_ERRRUN) {
             if (lua_type(L, -1) == LUA_TSTRING){ 
                 error_text = pstrdup(lua_tostring(L, -1));
@@ -367,13 +292,26 @@ static Datum lj_inlinehandler (const char *source) {
         }
 
         pop_vm(L);
+
     }PG_CATCH();{
-        out("TODO check vm is ok");
+        warning("TODO check vm is ok");
         pop_vm(L);
+        if (ref != &validator_ref) {
+            SPI_finish();
+        }
         PG_RE_THROW();
     }PG_END_TRY();
 
+    if (ref != &validator_ref) {
+        if ((rc = SPI_finish()) != SPI_OK_FINISH) {
+            elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
+        }
+    }
+
     if (status == 0){
+        if (ref == &call_ref) {
+            return result;
+        }
         PG_RETURN_VOID();
     }
 
@@ -397,6 +335,18 @@ static Datum lj_inlinehandler (const char *source) {
     }
 
     pg_throw("pllj unknown error");
+}
+
+static Datum lj_validator (FunctionCallInfo fcinfo) {
+    return lj_call(fcinfo, &validator_ref);
+}
+
+static Datum lj_callhandler (FunctionCallInfo fcinfo) {
+    return lj_call(fcinfo, &call_ref);
+}
+
+static Datum lj_inlinehandler (FunctionCallInfo fcinfo) {
+    return lj_call(fcinfo, &inline_ref);
 }
 
 extern Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
@@ -455,7 +405,7 @@ Datum _PG_fini(PG_FUNCTION_ARGS) {
 
 PG_FUNCTION_INFO_V1(pllj_validator);
 Datum pllj_validator(PG_FUNCTION_ARGS) {
-    return lj_validator(PG_GETARG_OID(0));
+    return lj_validator(fcinfo);
 }
 
 PG_FUNCTION_INFO_V1(pllj_call_handler);
@@ -463,12 +413,8 @@ Datum pllj_call_handler(PG_FUNCTION_ARGS) {
     return lj_callhandler(fcinfo);
 }
 
-#define CODEBLOCK \
-    ((InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0)))->source_text
-
-
 PG_FUNCTION_INFO_V1(pllj_inline_handler);
 Datum pllj_inline_handler(PG_FUNCTION_ARGS) {
-    return lj_inlinehandler(CODEBLOCK);
+    return lj_inlinehandler(fcinfo);
 }
 

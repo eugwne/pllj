@@ -59,6 +59,9 @@ local to_lua = require('pllj.io').to_lua
 local to_pg = require('pllj.io').to_pg
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
+local RefLJFunctionData = ffi.typeof('LJFunctionData *')
+
+local field_offset = ffi.offsetof("LJFunctionData", "result");
 
 local trigger_handler = require('pllj.trigger').trigger_handler
 
@@ -71,9 +74,10 @@ function pllj.validator(fn_oid)
 end
 
 
-function pllj.callhandler(fcinfo)
-    spi.connect()
-    fcinfo = ffi.cast(FunctionCallInfo, fcinfo)
+function pllj.callhandler(ctx)
+
+    ctx = ffi.cast(RefLJFunctionData, ctx)
+    fcinfo = ffi.cast(FunctionCallInfo, ctx.fcinfo)
     local fn_oid = fcinfo.flinfo.fn_oid
     local func_struct = function_cache[fn_oid]
 
@@ -91,13 +95,12 @@ function pllj.callhandler(fcinfo)
     if istrigger then
         local status, trg_result = trigger_handler(func_struct, fcinfo) --result_type
         if status then
-            C.set_pllj_call_result(ffi.cast('Datum', trg_result))
-            return spi.disconnect()
+            ctx.result[0] = ffi.cast('Datum', trg_result)
+            return 
         end
-
-
-        return spi.disconnect()
+        return 
     end
+
     local args = {}
     for i = 0, fcinfo.nargs - 1 do
         if fcinfo.argnull[i] == true then
@@ -123,23 +126,23 @@ function pllj.callhandler(fcinfo)
     end
     if not result or result == NULL then
         fcinfo.isnull = true
-        return spi.disconnect()
+        return 
     end
 
-    C.set_pllj_call_result(iof(result))
-    return spi.disconnect()
+    ctx.result[0] = ffi.cast('Datum', iof(result))
+
+    return 
 end
 
-function pllj.inlinehandler(...)
-    spi.connect()
-    local text = select(1, ...)
+function pllj.inlinehandler(text)
+
     local f, err = loadstring(text, nil, "t", env)
     if (f) then
         exec(f)
     else
         return throw_error(err)
     end
-    return spi.disconnect()
+    return 
 end
 
 return pllj

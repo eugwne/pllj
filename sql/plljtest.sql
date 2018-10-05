@@ -212,3 +212,14 @@ end
 local _, e = pcall(set_global)
 print(string.find(e, "attempt to set global var 'find_function'")~=nil)
 $$ language pllj;
+
+do $$
+local result = spi.prepare("select null union all select generate_series(7,9)"):exec()
+for _, row in ipairs(result) do
+	for _, col in ipairs(row) do
+		print (tonumber(col))
+	end
+end
+result = spi.prepare("select 'test'::text "):exec()
+print(result[1][1])
+$$ language pllj;
