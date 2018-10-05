@@ -12,18 +12,8 @@ local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
 local text_to_pg = require('pllj.pg.to_pg').datumfor[C.TEXTOID]
 
 local function throw_error(...)
-    spi.disconnect()
     error(...)
 end
-
-local function connect()
-  
-  if (C.SPI_connect() ~= pgdef.spi["SPI_OK_CONNECT"]) then
-    error("SPI_connect error")
-  end
-
-end
-
 
 local pg_error = require('pllj.pg.pg_error')
 
@@ -136,15 +126,6 @@ function spi.prepare(query, ...)
 
 end
 
-
-
-function spi.disconnect()
-    return C.SPI_finish()
-end
-
-
-
-spi.connect = connect
 spi.throw_error = throw_error
 
 
