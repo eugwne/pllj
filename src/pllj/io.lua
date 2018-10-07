@@ -72,6 +72,8 @@ local function create_converter_topg(oid)
                 return datum
             elseif (type(value) == "table" and getmetatable(value) == raw_datum) then
                 return _private[value].datum
+            else 
+                error('NYI')
             end
         end
     end
