@@ -19,8 +19,6 @@ local C = ffi.C;
 
 local spi = require('pllj.spi')
 
-local throw_error = spi.throw_error
-
 require('pllj.func') 
 local env = require('pllj.env').env
 
@@ -43,9 +41,9 @@ local function exec(f)
             if err.detail == nil then
                 err.detail = debug.traceback()
             end
-            throw_error(err)
+            return error(err)
         else
-            throw_error({ message = err, detail = debug.traceback() })
+            return error({ message = err, detail = debug.traceback() })
         end
     end
     return ret
@@ -85,7 +83,7 @@ function pllj.callhandler(ctx)
     if not func_struct or need_update(func_struct) then
         local f, err = get_func_from_oid(fn_oid)
         if not f then 
-            return throw_error(err) 
+            return error(err) 
         end
         func_struct = f
         function_cache[fn_oid] = func_struct
@@ -110,7 +108,7 @@ function pllj.callhandler(ctx)
             local converter_to_lua = to_lua(typeoid)
 
             if not converter_to_lua then
-                return throw_error('no conversion for type ' .. typeoid)
+                return error('no conversion for type ' .. typeoid)
             end
             table.insert(args, converter_to_lua(fcinfo.arg[i]))
         end
@@ -122,7 +120,7 @@ function pllj.callhandler(ctx)
 
     if not iof then
         --get_pg_typeinfo(func_struct.result_type)
-        return throw_error('no conversion for type ' .. tostring(func_struct.result_type))
+        return error('no conversion for type ' .. tostring(func_struct.result_type))
     end
     if not result or result == NULL then
         fcinfo.isnull = true
@@ -140,7 +138,7 @@ function pllj.inlinehandler(text)
     if (f) then
         exec(f)
     else
-        return throw_error(err)
+        return error(err)
     end
     return 
 end
