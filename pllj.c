@@ -302,13 +302,12 @@ static Datum lj_call (FunctionCallInfo fcinfo, int *ref) {
         PG_RE_THROW();
     }PG_END_TRY();
 
-    if (ref != &validator_ref) {
-        if ((rc = SPI_finish()) != SPI_OK_FINISH) {
-            elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
-        }
-    }
-
     if (status == 0){
+        if (ref != &validator_ref) {
+            if ((rc = SPI_finish()) != SPI_OK_FINISH) {
+                elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
+            }
+        }
         if (ref == &call_ref) {
             return result;
         }
