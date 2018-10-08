@@ -4,8 +4,6 @@ local bit = require("bit")
 
 local C = ffi.C;
 
-local throw_error = spi.throw_error
-
 local trigger_event = {
     when ={
         [tonumber(C.TRIGGER_EVENT_BEFORE)] = "before",
@@ -44,7 +42,7 @@ end
 
 local function trigger_handler(func_struct, fcinfo)
     if func_struct.result_type ~= C.TRIGGEROID then
-        return throw_error('wrong trigger function')
+        return error('wrong trigger function')
     end
     local tdata = ffi.cast('TriggerData*', fcinfo.context)
     local trigger_level = bit.band(tdata.tg_event, C.TRIGGER_EVENT_ROW) and "row" or "statement"
@@ -92,7 +90,7 @@ local function trigger_handler(func_struct, fcinfo)
 
         return true, tdata.tg_trigtuple
     end
-    --throw_error('NYI:triggers')
+
 end
 
 return {

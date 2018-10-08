@@ -14,8 +14,6 @@ local pg_error = require('pllj.pg.pg_error')
 
 local Deferred = require('pllj.misc').Deferred
 
-local throw_error = require('pllj.spi').throw_error
-
 local env = require('pllj.env').env
 local box = require('pllj.env').box
 
@@ -163,16 +161,16 @@ local function find_function( value, opt )
     end
     if funcoid == C.InvalidOid then
         if reg_name then
-            return throw_error("failed to register ".. reg_name);
+            return error("failed to register ".. reg_name);
         end
-        return throw_error("failed to register function with oid ".. funcoid);
+        return error("failed to register function with oid ".. funcoid);
     end
 
     local proc = C.SearchSysCache(syscache.enum.PROCOID, macro.ObjectIdGetDatum(funcoid), 0, 0, 0);
 
     -- body
     if proc == nil then --cdata ptr
-        return throw_error("cache lookup failed for function ".. funcoid);
+        return error("cache lookup failed for function ".. funcoid);
     end
     ---no throw_error, only goto fail----------------------------------------------------------------------
     d:add {C.ReleaseSysCache, proc} 
@@ -234,7 +232,7 @@ local function find_function( value, opt )
         local result = C.lj_FunctionCallInvoke(finfo, _isok)
         if _isok[0] == false then
             local e = pg_error.get_exception_text()
-            return throw_error("exec[".. (reg_name or funcoid).."] error:"..e)
+            return error("exec[".. (reg_name or funcoid).."] error:"..e)
         end
         if finfo.isnull == true then
             return nil
@@ -252,7 +250,7 @@ local function find_function( value, opt )
     ::fail:: 
     do
         d:call()
-        return throw_error(error_text)
+        return error(error_text)
     end
 
 end

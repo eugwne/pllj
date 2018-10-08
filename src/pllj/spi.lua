@@ -11,10 +11,6 @@ local pgdef = require('pllj.pgdefines')
 local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
 local text_to_pg = require('pllj.pg.to_pg').datumfor[C.TEXTOID]
 
-local function throw_error(...)
-    error(...)
-end
-
 local pg_error = require('pllj.pg.pg_error')
 
 local to_lua = require('pllj.io').to_lua
@@ -126,7 +122,6 @@ function spi.prepare(query, ...)
 
 end
 
-spi.throw_error = throw_error
 
 
 return spi
