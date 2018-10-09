@@ -237,7 +237,7 @@ for _, row in ipairs(result) do
 end
 $$ language pllj;
 INFO:  4
-INFO:  cdata<void *>: NULL
+INFO:  NULL
 INFO:  7
 do $$
 
@@ -249,7 +249,7 @@ for _, row in ipairs(result) do
 end
 $$ language pllj;
 INFO:  1
-INFO:  cdata<void *>: NULL
+INFO:  NULL
 INFO:  3
 do $$
 local function set_global()
