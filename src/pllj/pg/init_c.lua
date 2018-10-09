@@ -3,11 +3,9 @@ local C = ffi.C
 local all_types = require('pllj.pg.i').all_types
 ffi.cdef(all_types)
 
-local NULL = ffi.new("void*")
-
-ffi.NULL = NULL
-
 ffi.cdef[[
+typedef  struct null_s{} null_s;
+
 typedef struct LJFunctionData {
     void* fcinfo;
     Datum* result;
@@ -24,6 +22,35 @@ bool lj_CALLED_AS_TRIGGER (void* fcinfo);
 Oid lj_HeapTupleGetOid(HeapTuple pht);
 
 ]]
+
+local null_t, NULL, nullptr
+local null_mt = {
+  __tostring = function() return 'NULL' end,
+   __eq = function( left, right ) 
+            local t = type(left)
+            if not (t == 'nil' or t == 'cdata') then 
+                return false 
+            end
+
+            if ffi.cast('void*', left) == nullptr then
+                left = right
+            end
+            t = type(left)
+            if not (t == 'nil' or t == 'cdata') then 
+                return false 
+            end
+            local ptr = ffi.cast('void*', left)
+
+            return ((ptr == nil) or (ptr == nullptr))
+        end
+}
+null_t = ffi.metatype("null_s", null_mt)
+NULL = null_t()
+nullptr = ffi.cast('void*', NULL)
+
+--NULL = ffi.new("void*")
+ffi.NULL = NULL
+
 
 print = function(text)
     C.errstart(C.INFO, "", 0, nil, nil)
