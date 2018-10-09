@@ -263,6 +263,10 @@ cdecl_const(INT8OID)
 cdecl_const(TEXTOID)
 cdecl_const(VOIDOID)
 
+cdecl_const(INT2ARRAYOID)
+cdecl_const(INT4ARRAYOID)
+cdecl_const(TEXTARRAYOID)
+
 //cdecl_func(stringToQualifiedNameList)
 cdecl_func(parseTypeString)
 cdecl_func(InputFunctionCall)
@@ -287,4 +291,12 @@ cdecl_const(WARNING)
 cdecl_const(ERROR)
 cdecl_const(FATAL)
 cdecl_const(PANIC)
+
+#define SHIFT_ARR_DIMS ARR_DIMS(0)
+cdecl_const(SHIFT_ARR_DIMS)
+
+cdecl_func(get_typlenbyvalalign)
+cdecl_func(construct_md_array)
+cdecl_func(construct_array)
+
 

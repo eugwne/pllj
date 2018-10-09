@@ -94,6 +94,33 @@ local function FunctionCallInvoke(fcinfo) --
     return fptr(fcinfo)
 end
 
+local function ARR_NDIM(array)
+    return array.ndim
+end
+
+
+local function ARR_DIMS(array)
+    return ffi.cast('int*', (ffi.cast('char*', array) + C.SHIFT_ARR_DIMS))
+end
+
+--[[
+    #define ARR_LBOUND(a) \
+		((int *) (((char *) (a)) + sizeof(ArrayType) + \
+				  sizeof(int) * ARR_NDIM(a)))
+]]
+local sz_ArrayType = ffi.sizeof('ArrayType')
+local sz_int = ffi.sizeof('int')
+local function ARR_LBOUND(array)
+    return ffi.cast('int*', (ffi.cast('char*', array) + sz_ArrayType + sz_int * ARR_NDIM(array)))
+end
+
+local function get_typlenbyvalalign(typid)
+    local typlen = ffi.new("int16[?]", 1)
+    local typbyval = ffi.new("bool[?]", 1)
+    local typalign = ffi.new("char[?]", 1)
+
+    C.get_typlenbyvalalign(typid, typlen, typbyval, typalign)
+end
 
 return {
   GETSTRUCT = GETSTRUCT,
@@ -106,8 +133,12 @@ return {
   HeapTupleHeaderGetXmin = HeapTupleHeaderGetXmin,
   GET_2_BYTES = GET_2_BYTES,
   SET_VARSIZE = SET_VARSIZE,
+  GET_4_BYTES = GET_4_BYTES,
   DatumGetObjectId = DatumGetObjectId,
   CStringGetDatum = CStringGetDatum,
   InitFunctionCallInfoData = InitFunctionCallInfoData,
   FunctionCallInvoke = FunctionCallInvoke,
+  ARR_NDIM = ARR_NDIM,
+  ARR_DIMS = ARR_DIMS,
+  ARR_LBOUND = ARR_LBOUND,
 }

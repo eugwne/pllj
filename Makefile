@@ -13,7 +13,8 @@ DATA = pllj--0.1.sql
 REGRESS = \
 plljtest \
 type_string_conv \
-functional 
+functional \
+arraytest
 
 OBJS = \
 pllj.o 
