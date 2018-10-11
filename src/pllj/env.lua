@@ -77,7 +77,6 @@ local _math =
     time = os.time
  }
 
-
 local box = { 
     spi = spi, 
     NULL = NULL,

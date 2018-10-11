@@ -115,11 +115,12 @@ local function ARR_LBOUND(array)
 end
 
 local function get_typlenbyvalalign(typid)
-    local typlen = ffi.new("int16[?]", 1)
-    local typbyval = ffi.new("bool[?]", 1)
-    local typalign = ffi.new("char[?]", 1)
+    local len = ffi.new("int16[?]", 1)
+    local byval = ffi.new("bool[?]", 1)
+    local align = ffi.new("char[?]", 1)
 
-    C.get_typlenbyvalalign(typid, typlen, typbyval, typalign)
+    C.get_typlenbyvalalign(typid, len, byval, align)
+    return {len = len[0], byval = byval[0], align = align[0]}
 end
 
 return {
@@ -141,4 +142,5 @@ return {
   ARR_NDIM = ARR_NDIM,
   ARR_DIMS = ARR_DIMS,
   ARR_LBOUND = ARR_LBOUND,
+  get_typlenbyvalalign = get_typlenbyvalalign,
 }

@@ -9,7 +9,7 @@ local NULL = ffi.NULL
 local pgdef = require('pllj.pgdefines')
 
 local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
-local text_to_pg = require('pllj.pg.to_pg').datumfor[C.TEXTOID]
+local text_to_pg = require('pllj.type.text').to_datum
 
 local pg_error = require('pllj.pg.pg_error')
 

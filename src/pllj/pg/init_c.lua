@@ -21,6 +21,14 @@ int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls, boo
 bool lj_CALLED_AS_TRIGGER (void* fcinfo);
 Oid lj_HeapTupleGetOid(HeapTuple pht);
 
+ArrayType *
+lj_construct_md_array(Datum *elems,
+                    bool *nulls,
+                    int ndims,
+                    int *dims,
+                    int *lbs,
+                    Oid elmtype, int elmlen, bool elmbyval, char elmalign);
+
 ]]
 
 local null_t, NULL, nullptr
