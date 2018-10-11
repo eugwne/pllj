@@ -3,8 +3,8 @@ local C = ffi.C
 
 local macro = require('pllj.pg.macro')
 local syscache = require('pllj.pg.syscache')
-local text_to_lua = require('pllj.pg.to_lua').typeto[C.TEXTOID]
-local text_to_pg = require('pllj.pg.to_pg').datumfor[C.TEXTOID]
+local text_to_lua = require('pllj.type.text').to_lua
+local text_to_pg = require('pllj.type.text').to_datum
 
 local to_pg = require('pllj.io').to_pg
 local to_lua = require('pllj.io').to_lua

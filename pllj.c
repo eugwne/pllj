@@ -149,8 +149,34 @@ SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int 
     return 0;
 }
 
+extern ArrayType *
+lj_construct_md_array(Datum *elems,
+                    bool *nulls,
+                    int ndims,
+                    int *dims,
+                    int *lbs,
+                    Oid elmtype, int elmlen, bool elmbyval, char elmalign);
+ArrayType *
+lj_construct_md_array(Datum *elems,
+                    bool *nulls,
+                    int ndims,
+                    int *dims,
+                    int *lbs,
+                    Oid elmtype, int elmlen, bool elmbyval, char elmalign) {
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+        return construct_md_array(elems, nulls, ndims, dims,lbs,elmtype,elmlen, elmbyval, elmalign);
+    }PG_CATCH();	{
+        MemoryContextSwitchTo(oldcontext);
+        last_edata = CopyErrorData();
+        FlushErrorState();
+    }PG_END_TRY();
+    return 0;
+}
+
 extern bool lj_CALLED_AS_TRIGGER (void* fcinfo);
-extern bool lj_CALLED_AS_TRIGGER (void* fcinfo) {
+bool lj_CALLED_AS_TRIGGER (void* fcinfo) {
     return CALLED_AS_TRIGGER((FunctionCallInfo)fcinfo);
 }
 

@@ -298,5 +298,5 @@ cdecl_const(SHIFT_ARR_DIMS)
 cdecl_func(get_typlenbyvalalign)
 cdecl_func(construct_md_array)
 cdecl_func(construct_array)
-
-
+cdecl_func(SPI_datumTransfer)
+cdecl_func(MemoryContextStats)

@@ -6,6 +6,17 @@ local datumfor = require('pllj.pg.to_pg').datumfor
 
 local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 
+local function add_io(type)
+    typeto[type.oid] = type.to_lua
+    datumfor[type.oid] = type.to_datum
+end
+
+add_io(require('pllj.type.text'))
+add_io(require('pllj.type.int2'))
+add_io(require('pllj.type.int4'))
+add_io(require('pllj.type.int8'))
+add_io(require('pllj.type.int4array'))
+
 local _private = setmetatable({}, {__mode = "k"}) 
 
 local raw_datum = {
