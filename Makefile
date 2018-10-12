@@ -44,13 +44,15 @@ install-module:
 	cp src/pllj/pg/pg_error.lua $(LUA_DIR)/pllj/pg/pg_error.lua
 	cp src/pllj/pg/syscache.lua $(LUA_DIR)/pllj/pg/syscache.lua
 	cp src/pllj/pg/init_c.lua $(LUA_DIR)/pllj/pg/init_c.lua
-	cp src/pllj/pg/to_lua.lua $(LUA_DIR)/pllj/pg/to_lua.lua
-	cp src/pllj/pg/to_pg.lua $(LUA_DIR)/pllj/pg/to_pg.lua
 	cp src/pllj/pg/type_info.lua $(LUA_DIR)/pllj/pg/type_info.lua
 	cp src/pllj/pg/misc.lua $(LUA_DIR)/pllj/pg/misc.lua
+	cp src/pllj/type/array[T].lua $(LUA_DIR)/pllj/type/array[T].lua
+	cp src/pllj/type/void.lua $(LUA_DIR)/pllj/type/void.lua
 	cp src/pllj/type/text.lua $(LUA_DIR)/pllj/type/text.lua
 	cp src/pllj/type/int2.lua $(LUA_DIR)/pllj/type/int2.lua
 	cp src/pllj/type/int4.lua $(LUA_DIR)/pllj/type/int4.lua
 	cp src/pllj/type/int8.lua $(LUA_DIR)/pllj/type/int8.lua
+	cp src/pllj/type/int2array.lua $(LUA_DIR)/pllj/type/int2array.lua
 	cp src/pllj/type/int4array.lua $(LUA_DIR)/pllj/type/int4array.lua
+	cp src/pllj/type/int8array.lua $(LUA_DIR)/pllj/type/int8array.lua
 
