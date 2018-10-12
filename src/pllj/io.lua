@@ -1,21 +1,25 @@
 local ffi = require('ffi')
 local C = ffi.C
 
-local typeto = require('pllj.pg.to_lua').typeto
-local datumfor = require('pllj.pg.to_pg').datumfor
+local type_map = {}
 
 local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 
 local function add_io(type)
-    typeto[type.oid] = type.to_lua
-    datumfor[type.oid] = type.to_datum
+    type_map[type.oid] = { 
+        to_lua = type.to_lua or type.OUTPUT,
+        to_datum = type.to_datum or type.INPUT 
+    }
 end
 
+add_io(require('pllj.type.void'))
 add_io(require('pllj.type.text'))
 add_io(require('pllj.type.int2'))
 add_io(require('pllj.type.int4'))
 add_io(require('pllj.type.int8'))
+add_io(require('pllj.type.int2array'))
 add_io(require('pllj.type.int4array'))
+add_io(require('pllj.type.int8array'))
 
 local _private = setmetatable({}, {__mode = "k"}) 
 
@@ -93,23 +97,29 @@ local function create_converter_topg(oid)
 
 end
 
-local function to_lua(typeoid)
-    local to_lua = typeto[typeoid]
-    if not to_lua then
-        to_lua = create_converter_tolua(typeoid) or function(datum) return datum end
-        typeto[typeoid] = to_lua
+local function get_type(typeoid)
+    local type_data = type_map[typeoid]
+    if not type_data then
+        local to_lua = create_converter_tolua(typeoid) or function(datum) return datum end
+        local to_datum = create_converter_topg(typeoid) or function(datum) return datum end
+        type_data = {
+            to_lua = to_lua,
+            to_datum = to_datum
+        }
+        type_map[typeoid] = type_data
     end
-    return to_lua
+    return type_data
+end
+
+local function to_lua(typeoid)
+    return get_type(typeoid).to_lua
 end
 
 local function to_pg(typeoid)
-    local to_pg = datumfor[typeoid]
-    if not to_pg then
-        to_pg = create_converter_topg(typeoid) or function(datum) return datum end
-        datumfor[typeoid] = to_pg
-    end
-    return to_pg
+    return get_type(typeoid).to_datum
 end
+
+
 
 --local function datum_to_value(datum, atttypid)
 --

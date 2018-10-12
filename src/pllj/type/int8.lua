@@ -16,7 +16,7 @@ return {
         if type(lv) == "cdata" and ffi.istype('int64_t', lv) then
             return ffi.cast('Datum', lv)
         end
-    
+        
         return ffi.cast('Datum', tonumber(lv))
     end,
 
