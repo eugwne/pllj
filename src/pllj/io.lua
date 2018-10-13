@@ -20,6 +20,7 @@ add_io(require('pllj.type.int8'))
 add_io(require('pllj.type.int2array'))
 add_io(require('pllj.type.int4array'))
 add_io(require('pllj.type.int8array'))
+add_io(require('pllj.type.textarray'))
 
 local _private = setmetatable({}, {__mode = "k"}) 
 
@@ -81,6 +82,7 @@ local function create_converter_topg(oid)
                 local text = tostring(value)
                 local prev = C.CurrentMemoryContext
                 C.CurrentMemoryContext = C.CurTransactionContext
+                --TODO try catch
                 local datum = C.InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
                 C.CurrentMemoryContext = prev
 

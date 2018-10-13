@@ -33,6 +33,12 @@ if arg ~= nil then
 end
 return arg
 $$ LANGUAGE pllj;
+CREATE or replace FUNCTION echo_text_arr(arg text[]) RETURNS text[] AS $$ 
+if arg ~= nil then
+    arg[2]= "q"
+end
+return arg
+$$ LANGUAGE pllj;
 select quote_nullable(echo_arr_int(NULL::int4[]));
  quote_nullable 
 ----------------
@@ -145,5 +151,23 @@ INFO:  -1 : 2LL
           echo_arr_int           
 ---------------------------------
  [-2:2]={5,NULL,NULL,NULL,65546}
+(1 row)
+
+select quote_nullable(echo_text_arr(NULL::text[]));
+ quote_nullable 
+----------------
+ NULL
+(1 row)
+
+SELECT echo_text_arr('{}'::text[]);
+ echo_text_arr 
+---------------
+ [2:2]={q}
+(1 row)
+
+SELECT echo_text_arr(array[NULL, NULL, 'a']::text[]);
+ echo_text_arr 
+---------------
+ {NULL,q,a}
 (1 row)
 
