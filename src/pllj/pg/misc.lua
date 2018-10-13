@@ -14,9 +14,20 @@ local function get_io_func(oid)
         C.fmgr_info_cxt(typeinfo.typinput, input, C.TopMemoryContext);
         C.fmgr_info_cxt(typeinfo.typoutput, output, C.TopMemoryContext);
 
+        local inoid = oid
+        if typeinfo.typelem ~=0 then
+            inoid = typeinfo.typelem
+        end
+
         
         inputf = function(text)
-            return C.InputFunctionCall(input, ffi.cast('char*', text), oid, -1)
+            local prev = C.CurrentMemoryContext
+            C.CurrentMemoryContext = C.CurTransactionContext
+            --TODO ty catch
+            local datum = C.InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
+            C.CurrentMemoryContext = prev
+
+            return datum
         end
 
         outputf = function(datum)

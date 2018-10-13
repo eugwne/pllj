@@ -55,4 +55,5 @@ install-module:
 	cp src/pllj/type/int2array.lua $(LUA_DIR)/pllj/type/int2array.lua
 	cp src/pllj/type/int4array.lua $(LUA_DIR)/pllj/type/int4array.lua
 	cp src/pllj/type/int8array.lua $(LUA_DIR)/pllj/type/int8array.lua
+	cp src/pllj/type/textarray.lua $(LUA_DIR)/pllj/type/textarray.lua
 
