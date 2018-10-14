@@ -1,5 +1,5 @@
 local ffi = require('ffi')
-local spi = require('pllj.spi')
+local spi = require('pllj.spi').spi
 local bit = require("bit")
 
 local C = ffi.C;

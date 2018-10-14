@@ -1,4 +1,4 @@
-local spi = require("pllj.spi")
+local spi = require("pllj.spi").spi
 local NULL = require('ffi').NULL
 local protect = require('pllj.misc').protect
 

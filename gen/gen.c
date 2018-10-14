@@ -300,3 +300,5 @@ cdecl_func(construct_md_array)
 cdecl_func(construct_array)
 cdecl_func(SPI_datumTransfer)
 cdecl_func(MemoryContextStats)
+
+cdecl_const(PROVOLATILE_VOLATILE)

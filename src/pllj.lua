@@ -17,7 +17,7 @@ pllj._VERSION = "pllj 0.1"
 
 local C = ffi.C;
 
-local spi = require('pllj.spi')
+local spi_opt = require('pllj.spi').opt
 
 require('pllj.func') 
 local env = require('pllj.env').env
@@ -58,8 +58,6 @@ local to_pg = require('pllj.io').to_pg
 
 local FunctionCallInfo = ffi.typeof('struct FunctionCallInfoData *')
 local RefLJFunctionData = ffi.typeof('LJFunctionData *')
-
-local field_offset = ffi.offsetof("LJFunctionData", "result");
 
 local trigger_handler = require('pllj.trigger').trigger_handler
 
@@ -113,7 +111,8 @@ function pllj.callhandler(ctx)
             table.insert(args, converter_to_lua(fcinfo.arg[i]))
         end
     end
-    -- TODO pcall
+    -- TODO pcall?
+    spi_opt.readonly = func_struct.readonly
     local result = func_struct.func(unpack(args))
 
     local iof = to_pg(func_struct.result_type)

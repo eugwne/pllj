@@ -147,51 +147,40 @@ Oid lj_HeapTupleGetOid(HeapTuple pht){
     return HeapTupleGetOid(pht);
 }
 
+#define LJ_BEGIN_PG_TRY() MemoryContext oldcontext = CurrentMemoryContext; \
+    PG_TRY(); \
+    { last_edata = NULL;
+
+#define LJ_END_PG_TRY(code)     }PG_CATCH(); { \
+        MemoryContextSwitchTo(oldcontext); \
+        last_edata = CopyErrorData(); \
+        FlushErrorState(); \
+        code \
+    } PG_END_TRY();
+
 extern Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
 Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod){
-    MemoryContext oldcontext = CurrentMemoryContext;
-    PG_TRY();
-    {
-        last_edata = NULL;
+    LJ_BEGIN_PG_TRY()
         return InputFunctionCall(flinfo, str, typioparam, typmod);
-    }PG_CATCH(); {
-        MemoryContextSwitchTo(oldcontext);
-        last_edata = CopyErrorData();
-        FlushErrorState();
-    } PG_END_TRY();
+    LJ_END_PG_TRY()
     return 0;
 }
 
 extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
 Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
-    MemoryContext oldcontext = CurrentMemoryContext;
-    PG_TRY();
-    {
-        last_edata = NULL;
+    LJ_BEGIN_PG_TRY()
         return FunctionCallInvoke(fcinfo);
-    }PG_CATCH(); {
-        MemoryContextSwitchTo(oldcontext);
-        *isok = false;
-        last_edata = CopyErrorData();
-        FlushErrorState();
-    } PG_END_TRY();
+    LJ_END_PG_TRY( {*isok = false;})
     return 0;
 }
 
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int lj_SPI_execute(const char *src, bool read_only, long tcount) {
     int result = 0;
-    MemoryContext oldcontext = CurrentMemoryContext;
-    PG_TRY();
-    {
-        last_edata = NULL;
+    LJ_BEGIN_PG_TRY()
         result = SPI_execute(src, read_only, tcount);
-    }PG_CATCH();    {
-        MemoryContextSwitchTo(oldcontext);
-        last_edata = CopyErrorData();
-        FlushErrorState();
-        SPI_restore_connection();
-    }PG_END_TRY();
+    LJ_END_PG_TRY( {SPI_restore_connection();})
+
     return result;
 }
 
@@ -200,17 +189,9 @@ extern int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nul
 int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
                      bool read_only, long count) {
     int result = 0;
-    MemoryContext oldcontext = CurrentMemoryContext;
-    PG_TRY();
-    {
-        last_edata = NULL;
+    LJ_BEGIN_PG_TRY()
         result = SPI_execute_plan(plan, values, nulls, read_only, count);
-    }PG_CATCH();    {
-        MemoryContextSwitchTo(oldcontext);
-        last_edata = CopyErrorData();
-        FlushErrorState();
-        SPI_restore_connection();
-    }PG_END_TRY();
+    LJ_END_PG_TRY( {SPI_restore_connection();})
     return result;
 }
 
@@ -218,16 +199,9 @@ int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
 
 extern SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
 SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions){
-    MemoryContext oldcontext = CurrentMemoryContext;
-    PG_TRY();
-    {
-        last_edata = NULL;
+    LJ_BEGIN_PG_TRY()
         return SPI_prepare_cursor(src, nargs, argtypes, cursorOptions);
-    }PG_CATCH();	{
-        MemoryContextSwitchTo(oldcontext);
-        last_edata = CopyErrorData();
-        FlushErrorState();
-    }PG_END_TRY();
+    LJ_END_PG_TRY()
     return 0;
 }
 
@@ -245,16 +219,9 @@ lj_construct_md_array(Datum *elems,
                     int *dims,
                     int *lbs,
                     Oid elmtype, int elmlen, bool elmbyval, char elmalign) {
-    MemoryContext oldcontext = CurrentMemoryContext;
-    PG_TRY();
-    {
-        last_edata = NULL;
+    LJ_BEGIN_PG_TRY()
         return construct_md_array(elems, nulls, ndims, dims,lbs,elmtype,elmlen, elmbyval, elmalign);
-    }PG_CATCH();	{
-        MemoryContextSwitchTo(oldcontext);
-        last_edata = CopyErrorData();
-        FlushErrorState();
-    }PG_END_TRY();
+    LJ_END_PG_TRY()
     return 0;
 }
 
@@ -293,40 +260,44 @@ static int validator_ref = 0;
 extern volatile int call_depth;
 volatile int call_depth = 0;
 
-static lua_State *get_temp_state(){
+static lua_State * get_vm() {
     int status;
-    lua_State *LT;
-
-    LT = lua_open();
+    lua_State *L = lua_open();
 
     LUAJIT_VERSION_SYM();
-    lua_gc(LT, LUA_GCSTOP, 0);
-    luaL_openlibs(LT);
+    lua_gc(L, LUA_GCSTOP, 0);
+    luaL_openlibs(L);
     
-    lua_pushvalue(LT, LUA_GLOBALSINDEX);
-    luaL_setfuncs(LT, luaP_funcs, 0);
-    lua_settop(LT, 0);
+    lua_pushvalue(L, LUA_GLOBALSINDEX);
+    luaL_setfuncs(L, luaP_funcs, 0);
+    lua_settop(L, 0);
 
-    lua_gc(LT, LUA_GCRESTART, -1);
+    lua_gc(L, LUA_GCRESTART, -1);
 
-    lua_getglobal(LT, "require");
-    lua_pushstring(LT, "pllj");
-    status = lua_pcall(LT, 1, 1, 0);
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "pllj");
+    status = lua_pcall(L, 1, 1, 0);
+    //TODO close vm
     if( status == LUA_ERRRUN) {
-        luapg_error(LT);
+        luapg_error(L);
     } else if (status == LUA_ERRMEM) {
-        pg_throw("%s %s","Memory error:",lua_tostring(LT, -1));
+        pg_throw("%s %s","Memory error:",lua_tostring(L, -1));
     } else if (status == LUA_ERRERR) {
-        pg_throw("%s %s","Error:",lua_tostring(LT, -1));
+        pg_throw("%s %s","Error:",lua_tostring(L, -1));
     }
-    lua_getfield(LT, 1, "inlinehandler");
-    luaL_ref(LT, LUA_REGISTRYINDEX);
-    lua_getfield(LT, 1, "callhandler");
-    luaL_ref(LT, LUA_REGISTRYINDEX);
-    lua_getfield(LT, 1, "validator");
-    luaL_ref(LT, LUA_REGISTRYINDEX);
-    lua_settop(LT, 0);
-    return LT;
+    return L;
+}
+
+static lua_State *get_temp_state(){
+    lua_State *L = get_vm();
+    lua_getfield(L, 1, "inlinehandler");
+    luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_getfield(L, 1, "callhandler");
+    luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_getfield(L, 1, "validator");
+    luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_settop(L, 0);
+    return L;
 }
 
 static lua_State * push_vm() {
@@ -477,39 +448,15 @@ PGDLLEXPORT Datum pllj_inline_handler(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(_PG_init);
 Datum _PG_init(PG_FUNCTION_ARGS) {
-    int status;
+    AL[0] = get_vm();
 
-    AL[0] = lua_open();
-
-    LUAJIT_VERSION_SYM();
-    lua_gc(AL[0], LUA_GCSTOP, 0);
-    luaL_openlibs(AL[0]);
-
-    lua_pushvalue(AL[0], LUA_GLOBALSINDEX);
-    luaL_setfuncs(AL[0], luaP_funcs, 0);
-    lua_settop(AL[0], 0);
-
-    lua_gc(AL[0], LUA_GCRESTART, -1);
-
-    lua_getglobal(AL[0], "require");
-    lua_pushstring(AL[0], "pllj");
-    status = lua_pcall(AL[0], 1, 1, 0);
-    if( status == LUA_ERRRUN) {
-        luapg_error(AL[0]);
-    } else if (status == LUA_ERRMEM) {
-        pg_throw("%s %s","Memory error:",lua_tostring(AL[0], -1));
-    } else if (status == LUA_ERRERR) {
-        pg_throw("%s %s","Error:",lua_tostring(AL[0], -1));
-    }
     lua_getfield(AL[0], 1, "inlinehandler");
     inline_ref  = luaL_ref(AL[0], LUA_REGISTRYINDEX);
     lua_getfield(AL[0], 1, "callhandler");
     call_ref  = luaL_ref(AL[0], LUA_REGISTRYINDEX);
     lua_getfield(AL[0], 1, "validator");
     validator_ref  = luaL_ref(AL[0], LUA_REGISTRYINDEX);
-    
     lua_settop(AL[0], 0);
-
 
     PG_RETURN_VOID();
 }

@@ -83,7 +83,7 @@ local function create_converter_topg(oid)
                 local text = tostring(value)
                 local prev = C.CurrentMemoryContext
                 C.CurrentMemoryContext = C.CurTransactionContext
-                --TODO try catch
+
                 local datum = C.lj_InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
                 pg_error.throw_last_error();
                 C.CurrentMemoryContext = prev
