@@ -1,5 +1,6 @@
 local ffi = require('ffi')
 local C = ffi.C
+local pg_error = require('pllj.pg.pg_error')
 local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 
 local function get_io_func(oid)
@@ -24,7 +25,8 @@ local function get_io_func(oid)
             local prev = C.CurrentMemoryContext
             C.CurrentMemoryContext = C.CurTransactionContext
             --TODO ty catch
-            local datum = C.InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
+            local datum = C.lj_InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
+            pg_error.throw_last_error();
             C.CurrentMemoryContext = prev
 
             return datum

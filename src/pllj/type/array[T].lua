@@ -2,6 +2,7 @@ local ffi = require('ffi')
 local C = ffi.C
 local macro = require('pllj.pg.macro')
 local NULL = ffi.NULL
+local pg_error = require('pllj.pg.pg_error')
 
 local table_new = require('table.new')
 
@@ -114,9 +115,7 @@ local function to_datum_T(T)
     
             local arr = C.lj_construct_md_array(d, nulls, ndims, dims, lbs, elmtype, typ.len, typ.byval, typ.align)
             C.CurrentMemoryContext = prev
-            if arr == nil then
-                return error("construct_md_array error:"..pg_error.get_exception_text())
-            end
+            pg_error.throw_last_error("construct_md_array error: ")
     
             return ffi.cast('Datum', arr)
     

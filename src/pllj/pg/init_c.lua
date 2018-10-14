@@ -29,6 +29,8 @@ lj_construct_md_array(Datum *elems,
                     int *lbs,
                     Oid elmtype, int elmlen, bool elmbyval, char elmalign);
 
+Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
+
 ]]
 
 local null_t, NULL, nullptr
