@@ -27,6 +27,8 @@ local function get_func_from_oid(oid)
     local argtypes = procst.proargtypes.values;
     local rettype = procst.prorettype;
     local result_isset = procst.proretset;
+    local readonly = (procst.provolatile ~= C.PROVOLATILE_VOLATILE)
+
     --  print(procst)
     --  print(argtypes)
     --  print(nargs)
@@ -64,7 +66,6 @@ local function get_func_from_oid(oid)
                     end
                 end
             end
-            --proname = ffi.string(procst.proname.data)
 
             arguments = '...'
             if not vararg then
@@ -109,6 +110,7 @@ local function get_func_from_oid(oid)
         result_type = rettype,
         argtypes = targtypes,
         oid = oid,
+        readonly = readonly,
         --__fntext = fntext
     }
 end

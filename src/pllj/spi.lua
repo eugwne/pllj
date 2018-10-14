@@ -1,5 +1,9 @@
 local spi = {}
 
+local opt = {}
+
+opt.readonly = false
+
 local ffi = require('ffi')
 
 local C = ffi.C;
@@ -47,7 +51,7 @@ end
 function spi.execute(query)
     local result = -1
     --try
-    result = C.lj_SPI_execute(query, 0, 0)
+    result = C.lj_SPI_execute(query, opt.readonly, 0)
     pg_error.throw_last_error("SPI execute error: ")
     --catch
     return process_query_result(result)
@@ -84,7 +88,7 @@ local function exec_plan(self, ...)
     if not has_nulls then
         nulls = nil
     end
-    local result = C.lj_SPI_execute_plan(prepared_plan.plan, values, nulls, 0, 0)
+    local result = C.lj_SPI_execute_plan(prepared_plan.plan, values, nulls, opt.readonly, 0)
     pg_error.throw_last_error("SPI execute plan error: ")
     return process_query_result(result)
 end
@@ -121,4 +125,7 @@ end
 
 
 
-return spi
+return {
+    spi = spi, 
+    opt = opt,
+}
