@@ -8,6 +8,7 @@
 #include "catalog/pg_type.h"
 
 #include "access/htup_details.h"
+#include "access/xact.h"
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -73,13 +74,92 @@ static void pllj_parse_error(lua_State *L, ErrorData *edata){
     }
 }
 
+typedef struct
+{
+    ResourceOwner resowner;
+    MemoryContext mcontext;
+
+} SubTransactionBlock;
+static void stb_enter(lua_State *L, SubTransactionBlock *block){
+    if (!IsTransactionOrTransactionBlock())
+        luaL_error(L, "out of transaction");
+
+    block->resowner = CurrentResourceOwner;
+    block->mcontext = CurrentMemoryContext;
+    BeginInternalSubTransaction(NULL);
+    /* Do not want to leave the previous memory context */
+    MemoryContextSwitchTo(block->mcontext);
+}
+
+static void stb_exit(SubTransactionBlock *block, bool success){
+    if (success)
+        ReleaseCurrentSubTransaction();
+    else
+        RollbackAndReleaseCurrentSubTransaction();
+
+    MemoryContextSwitchTo(block->mcontext);
+    CurrentResourceOwner = block->resowner;
+
+    /*
+     * AtEOSubXact_SPI() should not have popped any SPI context, but just
+     * in case it did, make sure we remain connected.
+     */
+    SPI_restore_connection();
+}
+
+static int luaP_subt_pcall (lua_State *L) {
+    int status = 0;
+    SubTransactionBlock subtran;
+    subtran.mcontext = NULL;
+    subtran.resowner = NULL;
+
+    luaL_checkany(L, 1);
+
+    stb_enter(L, &subtran);
+
+    PG_TRY();{
+        status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
+    }
+    PG_CATCH();{
+        ErrorData  *edata;
+        edata = CopyErrorData();
+        ereport(FATAL, (errmsg("Unhandled exception: %s", edata->message)));
+    }
+    PG_END_TRY();
+    stb_exit(&subtran, status == 0);
+    
+
+    lua_pushboolean(L, (status == 0));
+    lua_insert(L, 1);
+    return lua_gettop(L);
+}
+
+static const luaL_Reg luaP_funcs[] = {
+    {"subt_pcall", luaP_subt_pcall},
+    {NULL, NULL}
+};
+
 extern ErrorData  *last_edata;
 ErrorData  *last_edata = NULL;
-#define THROW_NUMBER (-1000)
 
 extern Oid lj_HeapTupleGetOid(HeapTuple pht); 
 Oid lj_HeapTupleGetOid(HeapTuple pht){
     return HeapTupleGetOid(pht);
+}
+
+extern Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
+Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod){
+    MemoryContext oldcontext = CurrentMemoryContext;
+    PG_TRY();
+    {
+        last_edata = NULL;
+        return InputFunctionCall(flinfo, str, typioparam, typmod);
+    }PG_CATCH(); {
+        MemoryContextSwitchTo(oldcontext);
+        last_edata = CopyErrorData();
+        FlushErrorState();
+    } PG_END_TRY();
+    return 0;
 }
 
 extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
@@ -87,6 +167,7 @@ Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
+        last_edata = NULL;
         return FunctionCallInvoke(fcinfo);
     }PG_CATCH(); {
         MemoryContextSwitchTo(oldcontext);
@@ -99,16 +180,16 @@ Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
 
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int lj_SPI_execute(const char *src, bool read_only, long tcount) {
-    volatile int result = 0;
+    int result = 0;
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
+        last_edata = NULL;
         result = SPI_execute(src, read_only, tcount);
     }PG_CATCH();    {
         MemoryContextSwitchTo(oldcontext);
         last_edata = CopyErrorData();
         FlushErrorState();
-        result = THROW_NUMBER;
         SPI_restore_connection();
     }PG_END_TRY();
     return result;
@@ -118,16 +199,16 @@ extern int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nul
                      bool read_only, long count);
 int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
                      bool read_only, long count) {
-    volatile int result = 0;
+    int result = 0;
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
+        last_edata = NULL;
         result = SPI_execute_plan(plan, values, nulls, read_only, count);
     }PG_CATCH();    {
         MemoryContextSwitchTo(oldcontext);
         last_edata = CopyErrorData();
         FlushErrorState();
-        result = THROW_NUMBER;
         SPI_restore_connection();
     }PG_END_TRY();
     return result;
@@ -140,6 +221,7 @@ SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int 
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
+        last_edata = NULL;
         return SPI_prepare_cursor(src, nargs, argtypes, cursorOptions);
     }PG_CATCH();	{
         MemoryContextSwitchTo(oldcontext);
@@ -166,6 +248,7 @@ lj_construct_md_array(Datum *elems,
     MemoryContext oldcontext = CurrentMemoryContext;
     PG_TRY();
     {
+        last_edata = NULL;
         return construct_md_array(elems, nulls, ndims, dims,lbs,elmtype,elmlen, elmbyval, elmalign);
     }PG_CATCH();	{
         MemoryContextSwitchTo(oldcontext);
@@ -219,6 +302,11 @@ static lua_State *get_temp_state(){
     LUAJIT_VERSION_SYM();
     lua_gc(LT, LUA_GCSTOP, 0);
     luaL_openlibs(LT);
+    
+    lua_pushvalue(LT, LUA_GLOBALSINDEX);
+    luaL_setfuncs(LT, luaP_funcs, 0);
+    lua_settop(LT, 0);
+
     lua_gc(LT, LUA_GCRESTART, -1);
 
     lua_getglobal(LT, "require");
@@ -396,6 +484,11 @@ Datum _PG_init(PG_FUNCTION_ARGS) {
     LUAJIT_VERSION_SYM();
     lua_gc(AL[0], LUA_GCSTOP, 0);
     luaL_openlibs(AL[0]);
+
+    lua_pushvalue(AL[0], LUA_GLOBALSINDEX);
+    luaL_setfuncs(AL[0], luaP_funcs, 0);
+    lua_settop(AL[0], 0);
+
     lua_gc(AL[0], LUA_GCRESTART, -1);
 
     lua_getglobal(AL[0], "require");
@@ -414,7 +507,9 @@ Datum _PG_init(PG_FUNCTION_ARGS) {
     call_ref  = luaL_ref(AL[0], LUA_REGISTRYINDEX);
     lua_getfield(AL[0], 1, "validator");
     validator_ref  = luaL_ref(AL[0], LUA_REGISTRYINDEX);
+    
     lua_settop(AL[0], 0);
+
 
     PG_RETURN_VOID();
 }

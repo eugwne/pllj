@@ -1,5 +1,6 @@
 local ffi = require('ffi')
 local C = ffi.C
+local pg_error = require('pllj.pg.pg_error')
 
 local type_map = {}
 
@@ -83,7 +84,8 @@ local function create_converter_topg(oid)
                 local prev = C.CurrentMemoryContext
                 C.CurrentMemoryContext = C.CurTransactionContext
                 --TODO try catch
-                local datum = C.InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
+                local datum = C.lj_InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
+                pg_error.throw_last_error();
                 C.CurrentMemoryContext = prev
 
                 return datum

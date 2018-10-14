@@ -23,15 +23,11 @@ local _private = setmetatable({}, {__mode = "k"})
 
 local function process_query_result(result)
     if (result < 0) then
-        if (result == pg_error.THROW_NUMBER) then
-          return error("SPI execute error: "..pg_error.get_exception_text())
-        end
         return error("SPI execute error: "..tostring(query))
       end
       if ((result == pgdef.spi["SPI_OK_SELECT"]) and (C.SPI_processed > 0)) then
         local tupleDesc = C.SPI_tuptable.tupdesc --[[TupleDesc]]
-        
-    
+
         local rows = {}
         local spi_processed = tonumber(C.SPI_processed)
         for i = 0, spi_processed-1 do
@@ -52,6 +48,7 @@ function spi.execute(query)
     local result = -1
     --try
     result = C.lj_SPI_execute(query, 0, 0)
+    pg_error.throw_last_error("SPI execute error: ")
     --catch
     return process_query_result(result)
 end
@@ -88,6 +85,7 @@ local function exec_plan(self, ...)
         nulls = nil
     end
     local result = C.lj_SPI_execute_plan(prepared_plan.plan, values, nulls, 0, 0)
+    pg_error.throw_last_error("SPI execute plan error: ")
     return process_query_result(result)
 end
 
@@ -107,9 +105,8 @@ function spi.prepare(query, ...)
         oids[i-1] = oid
     end
     local plan = C.lj_SPI_prepare_cursor(query, argc, oids, 0)
-    if plan == nil then
-        return error("SPI_prepare_cursor error:"..pg_error.get_exception_text())
-    end
+    pg_error.throw_last_error("SPI_prepare_cursor error:")
+
     assert(C.SPI_keepplan(plan)==0)
 
     ffi.gc(plan, C.SPI_freeplan)

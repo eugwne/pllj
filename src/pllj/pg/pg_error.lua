@@ -1,5 +1,3 @@
-local THROW_NUMBER = -1000
-
 local ffi = require('ffi')
 
 local C = ffi.C
@@ -16,8 +14,16 @@ local function get_exception_text()
 end
 
 
+local function throw_last_error(text)
+    if C.last_edata == nil then return end 
+    text = (text or "") .. get_exception_text()
+    C.FreeErrorData(C.last_edata)
+    C.last_edata = nil
+    return error(text)
+end
+
 
 return {
-  THROW_NUMBER = THROW_NUMBER,
-  get_exception_text = get_exception_text
+  get_exception_text = get_exception_text,
+  throw_last_error = throw_last_error,
   }
