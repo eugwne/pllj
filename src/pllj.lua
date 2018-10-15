@@ -135,6 +135,7 @@ function pllj.inlinehandler(text)
 
     local f, err = loadstring(text, nil, "t", env)
     if (f) then
+        spi_opt.readonly = false
         exec(f)
     else
         return error(err)
