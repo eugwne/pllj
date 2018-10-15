@@ -298,3 +298,33 @@ INFO:  7
 INFO:  8
 INFO:  9
 INFO:  test
+CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
+    local plan = spi.find_plan("saved 2")
+    local result = plan:exec()
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ LANGUAGE pllj;
+select pg_temp.test_do();
+ERROR:  [pllj]: error
+DETAIL:  [string "local test_do..."]:5: attempt to index local 'plan' (a nil value)
+CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
+end
+do
+    spi.prepare("select 100;"):save_as("saved 2")
+    local _, e = pcall(spi.execute ,[[ 
+    CREATE TABLE TEST_TABLE(TEST TEXT NOT NULL);
+    ]])
+    print(string.find(e, "CREATE TABLE is not allowed")~=nil)
+    error("")
+$$ LANGUAGE pllj;
+INFO:  true
+ERROR:  [pllj]: error
+DETAIL:  [string "local test_do..."]:11: 
+select pg_temp.test_do();
+INFO:  100
+ test_do 
+---------
+ 
+(1 row)
+

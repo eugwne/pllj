@@ -111,7 +111,7 @@ function spi.prepare(query, ...)
     local plan = C.lj_SPI_prepare_cursor(query, argc, oids, 0)
     pg_error.throw_last_error("SPI_prepare_cursor error:")
 
-    assert(C.SPI_keepplan(plan)==0)
+    assert(C.SPI_keepplan(plan)==0, "SPI keepplan failed")
 
     ffi.gc(plan, C.SPI_freeplan)
     local prepared_plan = {}

@@ -223,3 +223,26 @@ end
 result = spi.prepare("select 'test'::text "):exec()
 print(result[1][1])
 $$ language pllj;
+
+CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
+    local plan = spi.find_plan("saved 2")
+    local result = plan:exec()
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ LANGUAGE pllj;
+
+select pg_temp.test_do();
+
+CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
+end
+do
+    spi.prepare("select 100;"):save_as("saved 2")
+    local _, e = pcall(spi.execute ,[[ 
+    CREATE TABLE TEST_TABLE(TEST TEXT NOT NULL);
+    ]])
+    print(string.find(e, "CREATE TABLE is not allowed")~=nil)
+    error("")
+$$ LANGUAGE pllj;
+
+select pg_temp.test_do();
