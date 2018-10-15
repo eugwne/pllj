@@ -62,6 +62,7 @@ local RefLJFunctionData = ffi.typeof('LJFunctionData *')
 local trigger_handler = require('pllj.trigger').trigger_handler
 
 function pllj.validator(fn_oid)
+    spi_opt.readonly = true
     local f, err = get_func_from_oid(fn_oid)
     if not f then 
         error(err) 
@@ -133,9 +134,9 @@ end
 
 function pllj.inlinehandler(text)
 
+    spi_opt.readonly = false
     local f, err = loadstring(text, nil, "t", env)
     if (f) then
-        spi_opt.readonly = false
         exec(f)
     else
         return error(err)

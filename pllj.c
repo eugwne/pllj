@@ -339,10 +339,8 @@ static Datum lj_call (FunctionCallInfo fcinfo, int *ref) {
     int rc;
     lua_State *L;
 
-    if (ref != &validator_ref) {
-        if ((rc = SPI_connect()) != SPI_OK_CONNECT) {
-            elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
-        }
+    if ((rc = SPI_connect()) != SPI_OK_CONNECT) {
+        elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
     }
 
     L = push_vm();
@@ -388,11 +386,11 @@ static Datum lj_call (FunctionCallInfo fcinfo, int *ref) {
     }PG_END_TRY();
 
     if (status == 0){
-        if (ref != &validator_ref) {
-            if ((rc = SPI_finish()) != SPI_OK_FINISH) {
-                elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
-            }
+
+        if ((rc = SPI_finish()) != SPI_OK_FINISH) {
+            elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
         }
+
         if (ref == &call_ref) {
             return result;
         }
