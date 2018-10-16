@@ -302,3 +302,27 @@ cdecl_func(SPI_datumTransfer)
 cdecl_func(MemoryContextStats)
 
 cdecl_const(PROVOLATILE_VOLATILE)
+
+cdecl_const(SPI_OK_CONNECT)
+cdecl_const(SPI_OK_FINISH)
+cdecl_const(SPI_OK_FETCH)
+cdecl_const(SPI_OK_UTILITY)
+cdecl_const(SPI_OK_SELECT)
+cdecl_const(SPI_OK_SELINTO)
+cdecl_const(SPI_OK_INSERT)
+cdecl_const(SPI_OK_DELETE)
+cdecl_const(SPI_OK_UPDATE)
+cdecl_const(SPI_OK_CURSOR)
+cdecl_const(SPI_OK_INSERT_RETURNING)
+cdecl_const(SPI_OK_DELETE_RETURNING)
+cdecl_const(SPI_OK_UPDATE_RETURNING)
+cdecl_const(SPI_OK_REWRITTEN)
+
+cdecl_const(PG_VERSION_NUM)
+
+#if PG_VERSION_NUM >= 100000
+cdecl_const(SPI_OK_REL_REGISTER)
+cdecl_const(SPI_OK_REL_UNREGISTER)
+cdecl_const(SPI_OK_TD_REGISTER)
+#endif
+

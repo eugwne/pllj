@@ -328,3 +328,56 @@ INFO:  100
  
 (1 row)
 
+DROP TABLE pg_temp.test; 
+CREATE TABLE pg_temp.test (
+  id integer,
+  val varchar(100)
+);
+INSERT INTO pg_temp.test VALUES (10,'t1'); 
+INSERT INTO pg_temp.test VALUES (20,'t2');
+CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
+    local result = spi.execute("UPDATE pg_temp.test set val='test' where val='t2' RETURNING id")
+    for _, row in ipairs(result) do
+        for _, col in ipairs(row) do
+            print (col)
+        end
+    end
+$$ language pllj;
+select pg_temp.test_do();
+INFO:  20
+ test_do 
+---------
+ 
+(1 row)
+
+select * from pg_temp.test; 
+ id | val  
+----+------
+ 10 | t1
+ 20 | test
+(2 rows)
+
+CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
+    local result = spi.execute("UPDATE pg_temp.test set val='test' where val='t1' RETURNING id")
+    for _, row in ipairs(result) do
+        for _, col in ipairs(row) do
+            print (col)
+        end
+    end
+    error("cancel change")
+$$ language pllj;
+do $$
+    local _, e = pcall(spi.execute ,[[ 
+        select pg_temp.test_do();
+    ]])
+    print(string.find(e, "cancel change")~=nil)
+$$ language pllj;
+INFO:  10
+INFO:  true
+select * from pg_temp.test; 
+ id | val  
+----+------
+ 10 | t1
+ 20 | test
+(2 rows)
+
