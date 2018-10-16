@@ -10,8 +10,6 @@ local C = ffi.C;
 
 local NULL = ffi.NULL
 
-local pgdef = require('pllj.pgdefines')
-
 local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
 local text_to_pg = require('pllj.type.text').to_datum
 
@@ -24,36 +22,65 @@ local tuple_to_lua_1array = require('pllj.tuple_ops').tuple_to_lua_1array
 
 local _private = setmetatable({}, {__mode = "k"}) 
 
+local function process_ok()
+    local tupleDesc = C.SPI_tuptable.tupdesc --[[TupleDesc]]
+
+    local rows = {}
+    local spi_processed = tonumber(C.SPI_processed)
+    for i = 0, spi_processed-1 do
+        local tuple = C.SPI_tuptable.vals[i] --[[HeapTuplelocal]]
+        rows[i+1] = tuple_to_lua_1array(tupleDesc, tuple)
+
+    end
+
+    C.SPI_freetuptable(C.SPI_tuptable);
+    return rows
+end
+
+local function noop()
+end
+
+local process_functions = {
+    [C.SPI_OK_CONNECT] = noop,
+    [C.SPI_OK_FINISH] = noop,
+    [C.SPI_OK_FETCH] = noop,
+    [C.SPI_OK_UTILITY] = noop,
+    [C.SPI_OK_SELECT] = process_ok,
+    [C.SPI_OK_SELINTO] = noop,
+    [C.SPI_OK_INSERT] = noop,
+    [C.SPI_OK_DELETE] = noop,
+    [C.SPI_OK_UPDATE] = noop,
+    [C.SPI_OK_CURSOR] = noop,
+    [C.SPI_OK_INSERT_RETURNING] = process_ok,
+    [C.SPI_OK_DELETE_RETURNING] = process_ok,
+    [C.SPI_OK_UPDATE_RETURNING] = process_ok,
+    [C.SPI_OK_REWRITTEN] = noop,
+}
+
+if C.PG_VERSION_NUM >= 100000 then
+    process_functions[C.SPI_OK_REL_REGISTER] = noop
+    process_functions[C.SPI_OK_REL_UNREGISTER] = noop
+    process_functions[C.SPI_OK_TD_REGISTER] = noop
+end
 
 local function process_query_result(result)
     if (result < 0) then
         return error("SPI execute error: "..tostring(query))
-      end
-      if ((result == pgdef.spi["SPI_OK_SELECT"]) and (C.SPI_processed > 0)) then
-        local tupleDesc = C.SPI_tuptable.tupdesc --[[TupleDesc]]
+    end
 
-        local rows = {}
-        local spi_processed = tonumber(C.SPI_processed)
-        for i = 0, spi_processed-1 do
-          local tuple = C.SPI_tuptable.vals[i] --[[HeapTuplelocal]]
-          rows[i+1] = tuple_to_lua_1array(tupleDesc, tuple)
-    
-        end
-    
-        C.SPI_freetuptable(C.SPI_tuptable);
-        return rows
-    
-      else
+    if C.SPI_processed > 0 then
+        return process_functions[result]()
+    else
         return {}
-      end
+    end
 end
 
 function spi.execute(query)
-    local result = -1
     --try
-    result = C.lj_SPI_execute(query, opt.readonly, 0)
-    pg_error.throw_last_error("SPI execute error: ")
+    local result = C.lj_SPI_execute(query, opt.readonly, 0)
     --catch
+    pg_error.throw_last_error("SPI execute error: ")
+    
     return process_query_result(result)
 end
 
@@ -119,8 +146,6 @@ function spi.prepare(query, ...)
     setmetatable(prepared_plan, plan_mt)
 
     return prepared_plan
-    
-
 end
 
 

@@ -9,8 +9,6 @@ local ffi = require('ffi')
 
 local NULL = ffi.NULL
 
-local pgdef = require('pllj.pgdefines')
-
 pllj._DESCRIPTION = "LuaJIT FFI postgres language extension"
 pllj._VERSION = "pllj 0.1"
 
@@ -80,6 +78,7 @@ function pllj.callhandler(ctx)
 
 
     if not func_struct or need_update(func_struct) then
+        spi_opt.readonly = true
         local f, err = get_func_from_oid(fn_oid)
         if not f then 
             return error(err) 

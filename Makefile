@@ -32,7 +32,6 @@ install-module:
 	cp src/pllj.lua $(LUA_DIR)/pllj.lua
 	cp src/pllj/env.lua $(LUA_DIR)/pllj/env.lua
 	cp src/pllj/misc.lua $(LUA_DIR)/pllj/misc.lua
-	cp src/pllj/pgdefines.lua $(LUA_DIR)/pllj/pgdefines.lua
 	cp src/pllj/func.lua $(LUA_DIR)/pllj/func.lua
 	cp src/pllj/trigger.lua $(LUA_DIR)/pllj/trigger.lua
 	cp src/pllj/spi.lua $(LUA_DIR)/pllj/spi.lua

@@ -10,7 +10,7 @@ local function get_exception_text()
   local detail = C.last_edata.detail == nil and "" or ffi.string(C.last_edata.detail)
   --TODO: C.FreeErrorData(C.last_edata) ?
   
-  return message.."|"..detail
+  return message.."\n\t"..detail
 end
 
 
