@@ -142,10 +142,36 @@ static const luaL_Reg luaP_funcs[] = {
 extern ErrorData  *last_edata;
 ErrorData  *last_edata = NULL;
 
-extern Oid lj_HeapTupleGetOid(HeapTuple pht); 
-Oid lj_HeapTupleGetOid(HeapTuple pht){
+extern Oid ljm_HeapTupleGetOid(HeapTuple pht); 
+Oid ljm_HeapTupleGetOid(HeapTuple pht){
     return HeapTupleGetOid(pht);
 }
+
+extern bool ljm_CALLED_AS_TRIGGER (void* fcinfo);
+bool ljm_CALLED_AS_TRIGGER (void* fcinfo) {
+    return CALLED_AS_TRIGGER((FunctionCallInfo)fcinfo);
+}
+
+extern float4 ljm_DatumGetFloat4(Datum X);
+float4 ljm_DatumGetFloat4(Datum X){
+    return DatumGetFloat4(X);
+}
+
+extern Datum ljm_Float4GetDatum(float4 X);
+Datum ljm_Float4GetDatum(float4 X) {
+    return Float4GetDatum(X);
+}
+
+extern float8 ljm_DatumGetFloat8(Datum X);
+float8 ljm_DatumGetFloat8(Datum X){
+    return DatumGetFloat8(X);
+}
+
+extern Datum ljm_Float8GetDatum(float8 X);
+Datum ljm_Float8GetDatum(float8 X) {
+    return Float8GetDatum(X);
+}
+
 
 #define LJ_BEGIN_PG_TRY() MemoryContext oldcontext = CurrentMemoryContext; \
     PG_TRY(); \
@@ -223,11 +249,6 @@ lj_construct_md_array(Datum *elems,
         return construct_md_array(elems, nulls, ndims, dims,lbs,elmtype,elmlen, elmbyval, elmalign);
     LJ_END_PG_TRY()
     return 0;
-}
-
-extern bool lj_CALLED_AS_TRIGGER (void* fcinfo);
-bool lj_CALLED_AS_TRIGGER (void* fcinfo) {
-    return CALLED_AS_TRIGGER((FunctionCallInfo)fcinfo);
 }
 
 static void luatable_report(lua_State *L, int elevel)

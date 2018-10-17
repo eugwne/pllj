@@ -87,7 +87,7 @@ function pllj.callhandler(ctx)
         function_cache[fn_oid] = func_struct
     end
 
-    local istrigger = C.lj_CALLED_AS_TRIGGER(fcinfo)
+    local istrigger = C.ljm_CALLED_AS_TRIGGER(fcinfo)
     if istrigger then
         local status, trg_result = trigger_handler(func_struct, fcinfo) --result_type
         if status then

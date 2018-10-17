@@ -126,6 +126,20 @@ ret value
 
 end
 return validation_error
+CREATE FUNCTION pg_temp.fl4(arg float4) RETURNS float4 AS $$ return arg + 1 $$ LANGUAGE pllj;
+select pg_temp.fl4(1.5);
+ fl4 
+-----
+ 2.5
+(1 row)
+
+CREATE FUNCTION pg_temp.fl8(arg float4) RETURNS float8 AS $$ return arg + 1 $$ LANGUAGE pllj;
+select pg_temp.fl8(2.5);
+ fl8 
+-----
+ 3.5
+(1 row)
+
 CREATE FUNCTION echo_int2(arg int2) RETURNS int2 AS $$ return arg $$ LANGUAGE pllj;
 SELECT echo_int2('12345');
  echo_int2 

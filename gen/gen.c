@@ -257,12 +257,19 @@ cdecl_const(HEAPTUPLESIZE)
 cdecl_func(SPI_returntuple)
 cdecl_func(SPI_copytuple)
 
+cdecl_const(FLOAT4OID)
+cdecl_const(FLOAT8OID)
 cdecl_const(INT2OID)
 cdecl_const(INT4OID)
 cdecl_const(INT8OID)
 cdecl_const(TEXTOID)
 cdecl_const(VOIDOID)
 
+cdecl_const(FLOAT4ARRAYOID)
+#ifndef FLOAT8ARRAYOID
+    #define FLOAT8ARRAYOID 1022
+#endif
+cdecl_const(FLOAT8ARRAYOID)
 cdecl_const(INT2ARRAYOID)
 cdecl_const(INT4ARRAYOID)
 cdecl_const(TEXTARRAYOID)

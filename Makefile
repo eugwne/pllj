@@ -51,6 +51,10 @@ install-module:
 	cp src/pllj/type/int2.lua $(LUA_DIR)/pllj/type/int2.lua
 	cp src/pllj/type/int4.lua $(LUA_DIR)/pllj/type/int4.lua
 	cp src/pllj/type/int8.lua $(LUA_DIR)/pllj/type/int8.lua
+	cp src/pllj/type/float4.lua $(LUA_DIR)/pllj/type/float4.lua
+	cp src/pllj/type/float8.lua $(LUA_DIR)/pllj/type/float8.lua
+	cp src/pllj/type/float4array.lua $(LUA_DIR)/pllj/type/float4array.lua
+	cp src/pllj/type/float8array.lua $(LUA_DIR)/pllj/type/float8array.lua
 	cp src/pllj/type/int2array.lua $(LUA_DIR)/pllj/type/int2array.lua
 	cp src/pllj/type/int4array.lua $(LUA_DIR)/pllj/type/int4array.lua
 	cp src/pllj/type/int8array.lua $(LUA_DIR)/pllj/type/int8array.lua
