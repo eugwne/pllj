@@ -18,8 +18,13 @@ Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
 SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
 int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls, bool read_only, long count);
 
-bool lj_CALLED_AS_TRIGGER (void* fcinfo);
-Oid lj_HeapTupleGetOid(HeapTuple pht);
+bool ljm_CALLED_AS_TRIGGER (void* fcinfo);
+Oid ljm_HeapTupleGetOid(HeapTuple pht);
+float4 ljm_DatumGetFloat4(Datum X);
+Datum ljm_Float4GetDatum(float4 X);
+
+float8 ljm_DatumGetFloat8(Datum X);
+Datum ljm_Float8GetDatum(float8 X);
 
 ArrayType *
 lj_construct_md_array(Datum *elems,

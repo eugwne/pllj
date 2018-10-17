@@ -17,7 +17,7 @@ local function find_lang_oid(str)
     if tuple == nil then
         return 0
     end
-    local langtupoid = C.lj_HeapTupleGetOid(tuple)
+    local langtupoid = C.ljm_HeapTupleGetOid(tuple)
     C.ReleaseSysCache(tuple)
     return langtupoid
 end

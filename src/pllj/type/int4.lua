@@ -13,9 +13,6 @@ return {
     end,
 
     to_datum = function(lv)
-        if type(lv) == 'string' then
-            return INPUT(lv)
-        end
         return ffi.cast('Datum', macro.SET_4_BYTES(tonumber(lv)))
     end,
 
