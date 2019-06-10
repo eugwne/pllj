@@ -1,57 +1,60 @@
 before_install:
-  - wget -qO- https://github.com/LuaJIT/LuaJIT/archive/v2.1.0-beta3.tar.gz | tar xvz
-  - cd ./LuaJIT-2.1.0-beta3
-  - make && sudo make install
-  - cd ../
-  - psql --version
-  - sudo /etc/init.d/postgresql stop
-  - sudo apt-get -y --purge remove postgresql libpq-dev libpq5 postgresql-client-common postgresql-common
-  - sudo rm -rf /var/lib/postgresql
-  - wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-  - sudo sh -c "echo deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main $PGVERSION >> /etc/apt/sources.list.d/postgresql.list"
-  - sudo apt-get update -qq
-  - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-server-dev-$PGVERSION
-  - sudo chmod 777 /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - sudo echo "local   all         postgres                          trust" > /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - sudo echo "local   all         all                               trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - sudo echo "host    all         all         127.0.0.1/32          trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - sudo echo "host    all         all         ::1/128               trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - sudo /etc/init.d/postgresql restart
-  - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
-  - gcc --version
-  - sudo apt-get install gcc-5-plugin-dev
-  - git clone https://github.com/eugwne/gcc-lua.git
-  - cd gcc-lua
-  - make && sudo make install
-  - cd ../
-  - git clone https://github.com/eugwne/gcc-lua-cdecl.git
-  - cd gcc-lua-cdecl
-  - sudo make install 
-  - cd ../
-  - cd gen
-  - gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua -I /usr/include/postgresql/$PGVERSION/server 
-  - gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua -I /usr/include/postgresql/$PGVERSION/server > ../src/pllj/pg/i.lua 
-  - cd ../
-  
+- wget -qO- https://github.com/LuaJIT/LuaJIT/archive/v2.1.0-beta3.tar.gz | tar xvz
+- cd ./LuaJIT-2.1.0-beta3
+- make && sudo make install
+- cd ../
+- psql --version
+- sudo /etc/init.d/postgresql stop
+- sudo apt-get -y --purge remove postgresql libpq-dev libpq5 postgresql-client-common
+  postgresql-common
+- sudo rm -rf /var/lib/postgresql
+- wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key
+  add -
+- sudo sh -c "echo deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main $PGVERSION
+  >> /etc/apt/sources.list.d/postgresql.list"
+- sudo apt-get update -qq
+- sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew"
+  install postgresql-$PGVERSION postgresql-server-dev-$PGVERSION
+- sudo chmod 777 /etc/postgresql/$PGVERSION/main/pg_hba.conf
+- sudo echo "local   all         postgres                          trust" > /etc/postgresql/$PGVERSION/main/pg_hba.conf
+- sudo echo "local   all         all                               trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
+- sudo echo "host    all         all         127.0.0.1/32          trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
+- sudo echo "host    all         all         ::1/128               trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
+- sudo /etc/init.d/postgresql restart
+- if [ -f ./src/pllj/pg/i.lua ]; then exit 0; fi
+- sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
+- gcc --version
+- sudo apt-get install gcc-5-plugin-dev
+- git clone https://github.com/eugwne/gcc-lua.git
+- cd gcc-lua
+- make && sudo make install
+- cd ../
+- git clone https://github.com/eugwne/gcc-lua-cdecl.git
+- cd gcc-lua-cdecl
+- sudo make install
+- cd ../
+- cd gen
+- gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua
+  -I /usr/include/postgresql/$PGVERSION/server
+- gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua
+  -I /usr/include/postgresql/$PGVERSION/server > ../src/pllj/pg/i.lua
+- cd ../
 before_script:
-  - createuser -U postgres -s travis
-
+- createuser -U postgres -s travis
 env:
   matrix:
-    - PGVERSION=9.6
-    - PGVERSION=10
-    - PGVERSION=11
-
-
+  - PGVERSION=9.6
+  - PGVERSION=10
+  - PGVERSION=11
+  global:
+    secure: Yae44wBLxPkGcwHTxUTO/c/R+EY35bzyemGogzmhykB+lbT12VebYeVjWeLelfUE+3gaP3ySbimI+ch3I4qKrGYLyLo9jgWZsbXsoY59kiRWV5o139puVzXAegFwIOg00U2lTW0sTVdjgQyJ9/2J9/3o8HSd0hQ07qE+4QfJMsHz7mL5LWH/N/wTeX22PNtG4igu5f8fwNUOfWsnW5ePUaswR6FxWPUhnLic09BPlG8z5M05/qlftPKXD9XL6WzebxXWa1is9GSocJY/f3BI570vWwU/3q/rWVmaxg4lhZyqm+bmN9omi14v4L6gSZI3g4LwLodcgCI4OL8q4N+JAM3BPOBcEB7EYzTt+XRlRqKjFIXbnlg3aZV8Vvwqf022XKQxqBkqPCRoDIcnnv7SRUryTvPBGAbYIgrH2b/ep7NaPw7TVChSJTZezAWMJS07WIJDsSHolCRegeOUCOMYxAzvtLR/m4MKjPFkUuu+MqpPi8dzwbi7jHWe9FacO1Mc8Xj+qlCXvjJJO1FZs1eZmSd/KevrG4s4DjztSR0PD0MzIyQWhYdRJ/QllSizUo+e/x2+hvrIDpAfJdW6NV5BeQNkjkYPx4MUVpv0b+JdqRh7+V3wvn/AKKbYtQF8VB72Yy0IziBgGI2SPvUJHRTGnIoQM3TmQAuxJvwm2ekfbUI=
+dist: xenial
 language: c
 compiler:
-  - gcc
-
+- gcc
 sudo: required
-
 notifications:
   email: false
-
 addons:
   apt:
     sources:
@@ -59,10 +62,9 @@ addons:
     packages:
     - gcc-5
     - g++-5
-    
 script:
-  - make && sudo make install && sudo make install-module && make installcheck
-
+- make && sudo make install && sudo make install-module && make installcheck
 after_script:
-  - cat regression.diffs || true
-  
+- cat regression.diffs || true
+after_success:
+- bash ./push.sh
