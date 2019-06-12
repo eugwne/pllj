@@ -295,4 +295,4 @@ do $$
     print(string.find(e, "cancel change")~=nil)
 $$ language pllj;
 
-select * from pg_temp.test; 
+select * from pg_temp.test;

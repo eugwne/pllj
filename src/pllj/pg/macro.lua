@@ -79,7 +79,7 @@ local function CStringGetDatum(X)
     return PointerGetDatum(ffi.cast('const char *',X))
 end
 
-local function InitFunctionCallInfoData(Fcinfo, Flinfo, Nargs, Collation, Context, Resultinfo)
+local InitFunctionCallInfoData = function(Fcinfo, Flinfo, Nargs, Collation, Context, Resultinfo)
     (Fcinfo).flinfo = (Flinfo);
     (Fcinfo).context = (Context);
     (Fcinfo).resultinfo = (Resultinfo);

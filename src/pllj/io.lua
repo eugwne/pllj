@@ -7,7 +7,7 @@ local type_map = {}
 local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 
 local function add_io(type)
-    type_map[type.oid] = { 
+    type_map[tonumber(type.oid)] = { 
         to_lua = type.to_lua or type.OUTPUT,
         to_datum = type.to_datum or type.INPUT 
     }
@@ -120,11 +120,11 @@ local function get_type(typeoid)
 end
 
 local function to_lua(typeoid)
-    return get_type(typeoid).to_lua
+    return get_type(tonumber(typeoid)).to_lua
 end
 
 local function to_pg(typeoid)
-    return get_type(typeoid).to_datum
+    return get_type(tonumber(typeoid)).to_datum
 end
 
 

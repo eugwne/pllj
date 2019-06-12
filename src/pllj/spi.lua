@@ -10,8 +10,7 @@ local C = ffi.C;
 
 local NULL = ffi.NULL
 
-local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
-local text_to_pg = require('pllj.type.text').to_datum
+local call_pg_c_variadic = require('pllj.pg.func').call_pg_c_variadic
 
 local pg_error = require('pllj.pg.pg_error')
 
@@ -19,6 +18,8 @@ local to_lua = require('pllj.io').to_lua
 local to_pg = require('pllj.io').to_pg
 
 local tuple_to_lua_1array = require('pllj.tuple_ops').tuple_to_lua_1array
+
+local get_oid_from_name = require('pllj.pg.type_info').get_oid_from_name
 
 local _private = setmetatable({}, {__mode = "k"}) 
 
@@ -132,7 +133,7 @@ function spi.prepare(query, ...)
     local arg_types = {...}
     local oids = ffi.new("Oid [?]", argc)
     for i = 1, argc do
-        local oid = call_pg_variadic(C.to_regtype, {text_to_pg(arg_types[i])})
+        local oid = get_oid_from_name(arg_types[i]) --call_pg_c_variadic(C.to_regtype, {text_to_pg(arg_types[i])})
         oids[i-1] = oid
     end
     local plan = C.lj_SPI_prepare_cursor(query, argc, oids, 0)

@@ -12,11 +12,13 @@ local text_t = require('pllj.type.text')
 
 local to_datum = to_datum_T(text_t)
 
+--text[]
 return {
+
     oid = C.TEXTARRAYOID,
-    names = {'text[]'},
 
     to_lua = to_lua_T(text_t),
+
     to_datum = function(lv)
         if type(lv) == "string" then
             return INPUT(lv)

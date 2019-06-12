@@ -388,7 +388,7 @@ do $$
 $$ language pllj;
 INFO:  10
 INFO:  true
-select * from pg_temp.test; 
+select * from pg_temp.test;
  id | val  
 ----+------
  10 | t1

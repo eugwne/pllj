@@ -60,6 +60,12 @@ cdecl_func(errstart)
 cdecl_func(errfinish)
 cdecl_func(errmsg)
 
+#if PG_VERSION_NUM >= 120000
+cdecl_struct(NullableDatum)
+cdecl_type(NullableDatum)
+#endif
+
+cdecl_type(FunctionCallInfo)
 //array
 cdecl_nstruct(ArrayType)
 cdecl_type(ArrayType)
@@ -109,11 +115,31 @@ cdecl_type(Form_pg_type)
 cdecl_func(GetUserId)
 cdecl_func(textout)
 
-//cdecl_type(FunctionCallInfo)
+#if PG_VERSION_NUM >= 120000
+cdecl_struct(FunctionCallInfoBaseData)
+cdecl_type(FunctionCallInfoBaseData)
+#define LOCAL_FCINFO_TYPE(name, nargs) \
+	typedef union \
+	{ \
+		FunctionCallInfoBaseData fcinfo; \
+		char fcinfo_data[SizeForFunctionCallInfo(nargs)]; \
+	} name; 
+LOCAL_FCINFO_TYPE(LOCAL_FCINFO_0, 0)
+cdecl_type(LOCAL_FCINFO_0)
+LOCAL_FCINFO_TYPE(LOCAL_FCINFO_1, 1)
+cdecl_type(LOCAL_FCINFO_1)
+LOCAL_FCINFO_TYPE(LOCAL_FCINFO_2, 2)
+cdecl_type(LOCAL_FCINFO_2)
+LOCAL_FCINFO_TYPE(LOCAL_FCINFO_3, 3)
+cdecl_type(LOCAL_FCINFO_3)
+LOCAL_FCINFO_TYPE(FCInfoMax, FUNC_MAX_ARGS)
+cdecl_type(FCInfoMax)
 
-
+#else
 cdecl_struct(FunctionCallInfoData)
 cdecl_type(FunctionCallInfoData)
+#endif
+
 
 cdecl_struct(ItemPointerData)
 cdecl_type(ItemPointerData)
@@ -133,7 +159,11 @@ cdecl_nstruct(FormData_pg_attribute)
 cdecl_type(FormData_pg_attribute)
 cdecl_type(Form_pg_attribute)
 //cdecl_type(Form_pg_attribute)
-cdecl_struct(tupleDesc)
+#if PG_VERSION_NUM >= 120000
+    cdecl_struct(TupleDescData)
+#else
+    cdecl_struct(tupleDesc)
+#endif
 cdecl_type(TupleDesc)
 
 cdecl_struct(HeapTupleFields)
@@ -325,11 +355,11 @@ cdecl_const(SPI_OK_DELETE_RETURNING)
 cdecl_const(SPI_OK_UPDATE_RETURNING)
 cdecl_const(SPI_OK_REWRITTEN)
 
-cdecl_const(PG_VERSION_NUM)
-
 #if PG_VERSION_NUM >= 100000
 cdecl_const(SPI_OK_REL_REGISTER)
 cdecl_const(SPI_OK_REL_UNREGISTER)
 cdecl_const(SPI_OK_TD_REGISTER)
 #endif
+cdecl_func(get_language_name)
 
+cdecl_const(PG_VERSION_NUM)

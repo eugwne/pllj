@@ -8,8 +8,8 @@ local text_to_pg = require('pllj.type.text').to_datum
 
 local to_pg = require('pllj.io').to_pg
 local to_lua = require('pllj.io').to_lua
-local call_pg_variadic = require('pllj.pg.func').call_pg_variadic
-local lj_lang_oid = require('pllj.pg.func').find_lang_oid('pllj')
+local call_pg_c_variadic = require('pllj.pg.func').call_pg_c_variadic
+local find_lang_name = require('pllj.pg.func').find_lang_name
 local pg_error = require('pllj.pg.pg_error')
 
 local Deferred = require('pllj.misc').Deferred
@@ -29,15 +29,6 @@ local function get_func_from_oid(oid)
     local result_isset = procst.proretset;
     local readonly = (procst.provolatile ~= C.PROVOLATILE_VOLATILE)
 
-    --  print(procst)
-    --  print(argtypes)
-    --  print(nargs)
-    --  print('rettype  '..rettype)
-
-    --  for i = 0, nargs-1 do
-    --    print('argtype '..tostring(argtypes[i]))
-    --    get_pg_typeinfo(argtypes[i])
-    --  end
     local arguments = ''
     local targtypes = {}
     local proname = ffi.string(procst.proname.data) --'anonymous'
@@ -151,7 +142,17 @@ local function find_function( value, opt )
     local opt = opt or {}
     local funcoid = C.InvalidOid
 
-    local error_text, reg_name, argtypes, argnames, argmodes, argc, lf, finfo, func
+    local error_text
+        , reg_name
+        , argtypes
+        , argnames
+        , argmodes
+        , argc
+        , finfo
+        , func
+        , init_args
+        , prorettype
+    local fmgrInfo = 0
     local _isok
     if type(value) == 'number' then
         funcoid = value
@@ -159,7 +160,7 @@ local function find_function( value, opt )
         reg_name = value
         --this needs try catch:
         --funcoid = tonumber(macro.DatumGetObjectId(C.DirectFunctionCall1Coll(C.regprocedurein, 0, macro.CStringGetDatum(value))));
-        funcoid = tonumber(macro.DatumGetObjectId(call_pg_variadic(C.to_regprocedure, {text_to_pg(value)})));
+        funcoid = tonumber(macro.DatumGetObjectId(call_pg_c_variadic(C.to_regprocedure, {text_to_pg(value)})));
     end
     if funcoid == C.InvalidOid then
         if reg_name then
@@ -179,17 +180,17 @@ local function find_function( value, opt )
 
     local procst = ffi.cast('Form_pg_proc', macro.GETSTRUCT(proc));
 
-    local luasrc = (procst.prolang == lj_lang_oid)
+    local luasrc = (find_lang_name(procst.prolang) == 'pllj')
     if luasrc then
         error_text = "luasrc NYI";
         goto fail
     end
 
-    if ( opt.only_internal and (procst.prolang ~= INTERNALlanguageId) and( not luasrc) ) then
+    if ( opt.only_internal and (procst.prolang ~= C.INTERNALlanguageId) and( not luasrc) ) then
         error_text = "supported only SQL/internal functions";
         goto fail
     end
-
+    prorettype = procst.prorettype
     
     C.CurrentMemoryContext = C.TopMemoryContext
     d:add {set_memorycontext, prev} 
@@ -200,33 +201,74 @@ local function find_function( value, opt )
     
     argc = C.get_func_arg_info(proc, argtypes, argnames, argmodes);
 
-    lf = {
-        prorettype = procst.prorettype,
-        funcoid = funcoid,
-        options = opt,
-        fi = 0,
-        argc = argc
-    }
-
     if (procst.proretset) then
         error_text = "proretset NYI" 
         goto fail
     else
-        local fi = ffi.new("FmgrInfo[?]", 1)
-        C.fmgr_info_cxt(funcoid, fi, C.CurrentMemoryContext);
-        lf.fi = fi
+        fmgrInfo = ffi.new("FmgrInfo[?]", 1)
+        C.fmgr_info_cxt(funcoid, fmgrInfo, C.CurrentMemoryContext);
     end
 
-    finfo = ffi.new('struct FunctionCallInfoData')
+    
+    if C.PG_VERSION_NUM >= 120000 then
+        --TODO argc
+        local mem
+        if argc == 0 then
+            mem = ffi.new('LOCAL_FCINFO_0[1]')
+        elseif argc == 1 then
+            mem = ffi.new('LOCAL_FCINFO_1[1]')
+        elseif argc == 2 then
+            mem = ffi.new('LOCAL_FCINFO_2[1]')
+        elseif argc == 3 then
+            mem = ffi.new('LOCAL_FCINFO_3[1]')
+        else
+            return error('NYI')
+        end
+        local fcinfo = mem[0].fcinfo
+        finfo = ffi.cast('FunctionCallInfo', mem)
+        if fmgrInfo[0].fn_strict == true then
+            init_args = function(args)
+                local ref_arg = fcinfo.args[i]
+                for i = 0, argc - 1 do
+                    ref_arg.value,  ref_arg.isnull = to_pg(argtypes[0][i])(args[i+1])
+                    if ref_arg.isnull == true then return error('strict function null arg['..tostring(i)..']') end
+                end
+            end
+        else
+            init_args = function(args)
+                for i = 0, argc - 1 do
+                    fcinfo.args[i].value,  fcinfo.args[i].isnull = to_pg(argtypes[0][i])(args[i+1])
+                end
+            end
+        end
+    else
+        finfo = ffi.new('struct FunctionCallInfoData')
+        if fmgrInfo[0].fn_strict == true then
+            init_args = function(args)
+                ffi.fill(finfo.argnull, argc)
+                for i = 0, argc - 1 do
+                    finfo.arg[i], finfo.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
+                    if finfo.argnull[i] == true then return error('strict function null arg['..tostring(i)..']') end
+                end
+            end
+        else
+            init_args = function(args)
+                ffi.fill(finfo.argnull, argc)
+                for i = 0, argc - 1 do
+                    finfo.arg[i], finfo.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
+                end
+            end
+        end
+    end
+    
+    
+
     
     _isok = ffi.new("bool[?]", 1)
     func = function(...)
         local args = {...}
-        macro.InitFunctionCallInfoData(finfo, lf.fi, argc, C.InvalidOid, nil, nil)
-        ffi.fill(finfo.argnull, lf.argc)
-        for i = 0, lf.argc - 1 do
-            finfo.arg[i] = to_pg(argtypes[0][i])(args[i+1], finfo.argnull + i)
-        end
+        macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil, nil)
+        init_args(args)
 
         --macro has no try catch
         --local result = macro.FunctionCallInvoke(finfo)
@@ -239,7 +281,7 @@ local function find_function( value, opt )
         if finfo.isnull == true then
             return nil
         end
-        return to_lua(lf.prorettype)(result)
+        return to_lua(prorettype)(result)
 
     end
 

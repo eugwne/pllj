@@ -60,7 +60,7 @@ local function to_datum_T(T)
 
     local to_datum = function(lv)
         if lv == nil or lv == NULL then
-            return ffi.cast('Datum', 0)
+            return ffi.cast('Datum', 0), true
         end
         local type_name = type(lv)
         if (type_name == 'table') then
@@ -117,7 +117,7 @@ local function to_datum_T(T)
             C.CurrentMemoryContext = prev
             pg_error.throw_last_error("construct_md_array error: ")
     
-            return ffi.cast('Datum', arr)
+            return ffi.cast('Datum', arr), false
     
         end
         return error('NYI')
