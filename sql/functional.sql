@@ -20,6 +20,7 @@ $$ language sql;
 do $$
 local get_json = load_function('pg_temp.get_json()')
 print(get_json())
+print(type(get_json()[1]))
 $$ language pllj;
 
 drop function pg_temp.get_json();

@@ -95,8 +95,19 @@ function spi.find_plan(name)
     return _saved_plans[name]
 end
 
+local unwrap_plan
+if __untrusted__ then
+    unwrap_plan = function(plan_obj)
+        return plan_obj
+    end
+else
+    unwrap_plan = function(plan_obj)
+        return _private[plan_obj]
+    end
+end
+
 local function exec_plan(self, ...)
-    local prepared_plan = _private[self]
+    local prepared_plan = unwrap_plan(self)
     local argc = prepared_plan.argc
     local oids = prepared_plan.oids
     local values = ffi.new("Datum [?]", argc)
@@ -128,6 +139,22 @@ local plan_mt = {
     },
   }
 
+local wrap_plan
+if __untrusted__ then
+    wrap_plan = function(plan_obj)
+        setmetatable(plan_obj, plan_mt)
+        return plan_obj
+    end
+else
+    wrap_plan = function(plan_obj)
+        local prepared_plan = {}
+        _private[prepared_plan] = plan_obj
+        setmetatable(prepared_plan, plan_mt)
+        return prepared_plan
+    end
+end
+
+
 function spi.prepare(query, ...)
     local argc = select('#', ...)
     local arg_types = {...}
@@ -142,11 +169,9 @@ function spi.prepare(query, ...)
     assert(C.SPI_keepplan(plan)==0, "SPI keepplan failed")
 
     ffi.gc(plan, C.SPI_freeplan)
-    local prepared_plan = {}
-    _private[prepared_plan] = {plan = plan, oids = oids, argc = argc}
-    setmetatable(prepared_plan, plan_mt)
 
-    return prepared_plan
+    return wrap_plan ({plan = plan, oids = oids, argc = argc})
+
 end
 
 

@@ -1,0 +1,6 @@
+# pllju extension
+default_version = '0.1'
+comment = 'LuaJIT as a procedural language (unrestricted)'
+module_pathname = '$libdir/pllju'
+relocatable = false
+schema = pg_catalog

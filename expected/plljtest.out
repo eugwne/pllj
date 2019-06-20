@@ -1,5 +1,6 @@
 \set ECHO none
 do $$
+assert(__untrusted__==false)
 print("Hello LuaJIT FFI")
 $$ language pllj;
 INFO:  Hello LuaJIT FFI

@@ -1,6 +1,6 @@
 # pllj extension
 default_version = '0.1'
-comment = 'LuaJIT as a procedural language'
+comment = 'LuaJIT as a procedural language (sandbox)'
 module_pathname = '$libdir/pllj'
 relocatable = false
 schema = pg_catalog

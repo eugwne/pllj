@@ -15,7 +15,7 @@ local pg_error = require('pllj.pg.pg_error')
 local Deferred = require('pllj.misc').Deferred
 
 local env = require('pllj.env').env
-local box = require('pllj.env').box
+local env_add = require('pllj.env').add
 
 local function get_func_from_oid(oid)
     local isNull = ffi.new("bool[?]", 1)
@@ -298,7 +298,7 @@ local function find_function( value, opt )
     end
 
 end
-rawset(box, "find_function", find_function)
+env_add("find_function", find_function)
 
 --TODO: change it
 local _saved_functions = {}
@@ -307,12 +307,12 @@ local function save_function(value, opt)
     _saved_functions[value] = result
     return result
 end
-rawset(box, "save_function", save_function)
+env_add("save_function", save_function)
 
 local function load_function(value)
     return _saved_functions[value]
 end
-rawset(box, "load_function", load_function)
+env_add("load_function", load_function)
 
 
 return {
