@@ -9,10 +9,11 @@ local to_datum_T = require('pllj.type.array[T]').to_datum_T
 local int4_t = require('pllj.type.int4')
 
 return {
+
     oid = C.INT4ARRAYOID,
-    names = {'integer[]','int4[]','int[]'},
 
     to_lua = to_lua_T(int4_t),
+    
     to_datum = to_datum_T(int4_t),
 
 }

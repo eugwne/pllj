@@ -6,8 +6,6 @@ return {
 
     oid = C.INT4OID,
 
-    names = {'integer', 'int4', 'int'},
-
     to_lua = function(datum)
         return tonumber(macro.GET_4_BYTES(datum))
     end,

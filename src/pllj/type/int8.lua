@@ -6,8 +6,6 @@ return {
 
     oid = C.INT8OID,
 
-    names = {'bigint', 'int8'},
-
     to_lua = function(datum)
         return ffi.cast('int64_t', datum)
     end,

@@ -6,8 +6,6 @@ return {
 
     oid = C.INT2OID,
 
-    names = {'smallint', 'int2'},
-
     to_lua = function(datum)
         return tonumber(macro.GET_2_BYTES(datum))
     end,

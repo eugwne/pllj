@@ -142,11 +142,6 @@ static const luaL_Reg luaP_funcs[] = {
 extern ErrorData  *last_edata;
 ErrorData  *last_edata = NULL;
 
-extern Oid ljm_HeapTupleGetOid(HeapTuple pht); 
-Oid ljm_HeapTupleGetOid(HeapTuple pht){
-    return HeapTupleGetOid(pht);
-}
-
 extern bool ljm_CALLED_AS_TRIGGER (void* fcinfo);
 bool ljm_CALLED_AS_TRIGGER (void* fcinfo) {
     return CALLED_AS_TRIGGER((FunctionCallInfo)fcinfo);
@@ -192,8 +187,8 @@ Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 ty
     return 0;
 }
 
-extern Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok);
-Datum lj_FunctionCallInvoke(FunctionCallInfoData* fcinfo, bool* isok) {
+extern Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
+Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
     LJ_BEGIN_PG_TRY()
         return FunctionCallInvoke(fcinfo);
     LJ_END_PG_TRY( {*isok = false;})

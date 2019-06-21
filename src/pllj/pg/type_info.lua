@@ -1,6 +1,5 @@
 local ffi = require('ffi')
 local C = ffi.C
-require('pllj.pg.init_c')
 
 local syscache = require('pllj.pg.syscache')
 local macro = require('pllj.pg.macro')

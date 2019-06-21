@@ -5,8 +5,6 @@ return {
 
     oid = C.VOIDOID,
 
-    names = {'void'},
-
     to_lua = function(datum)
     end,
 

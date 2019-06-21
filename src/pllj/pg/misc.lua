@@ -24,7 +24,7 @@ local function get_io_func(oid)
         inputf = function(text)
             local prev = C.CurrentMemoryContext
             C.CurrentMemoryContext = C.CurTransactionContext
-            --TODO ty catch
+            --try catch
             local datum = C.lj_InputFunctionCall(input, ffi.cast('char*', text), inoid, -1)
             pg_error.throw_last_error();
             C.CurrentMemoryContext = prev
