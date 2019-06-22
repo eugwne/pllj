@@ -68,7 +68,7 @@ local _math =
     insert = table.insert,
     maxn = table.maxn,
     remove = table.remove,
-    sort =table.sort,
+    sort = table.sort,
  }
 
  local _os = {
@@ -80,7 +80,8 @@ local _math =
 local box = { 
     spi = spi, 
     NULL = NULL,
-    print = print, 
+    print = print,
+    __untrusted__ = __untrusted__, 
 
     assert =  assert,
     error = error,
@@ -108,10 +109,28 @@ local env_mt = {
         return error(string.format( "attempt to set global var '%s'", var))
     end
 }
-local env = {}
-setmetatable(env, env_mt)
+local env
+local sandbox = {}
+setmetatable(sandbox, env_mt)
+
+local add
+if __untrusted__ then
+    env = _G
+    env.spi = spi 
+    env.NULL = NULL
+
+    add = function(key, value)
+        _G[key] = value
+    end
+else
+    env = sandbox
+    add = function(key, value)
+        rawset(box, key, value)
+    end
+end
 
 return {
     env = env,
-    box = box,
+    sandbox_env = sandbox,
+    add = add,
 }

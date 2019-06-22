@@ -6,9 +6,17 @@ LUA_INCDIR ?= /usr/local/include/luajit-2.1
 LUALIB ?= -L/usr/local/lib -lluajit-5.1
 LUA_DIR ?= /usr/local/share/lua/5.1
 
-MODULE_big = pllj
-EXTENSION = pllj
-DATA = pllj--0.1.sql
+ifeq ($(UNTRUSTED), 1)
+    MODULE_big = pllju
+    EXTENSION = pllju
+    DATA = pllju--0.1.sql
+REGRESS = \
+plljutest 
+
+else
+    MODULE_big = pllj
+    EXTENSION = pllj
+    DATA = pllj--0.1.sql
 
 REGRESS = \
 plljtest \
@@ -16,10 +24,18 @@ type_string_conv \
 functional \
 arraytest
 
+endif
+
+
 OBJS = \
 pllj.o 
 
-PG_CPPFLAGS = -I$(LUA_INCDIR)
+PG_CPPFLAGS = -I$(LUA_INCDIR) 
+
+ifeq ($(UNTRUSTED), 1)
+    PG_CPPFLAGS += -DUNTRUSTED
+endif
+
 SHLIB_LINK = $(LUALIB)
 
 PGXS := $(shell $(PG_CONFIG) --pgxs)

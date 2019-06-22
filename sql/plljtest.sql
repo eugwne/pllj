@@ -3,6 +3,7 @@ CREATE EXTENSION pllj;
 \set ECHO all
 
 do $$
+assert(__untrusted__==false)
 print("Hello LuaJIT FFI")
 $$ language pllj;
 
