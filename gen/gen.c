@@ -277,6 +277,7 @@ cdecl_const(SIZEOF_DATUM)
 cdecl_const(SIZEOF_BOOL)
 
 cdecl_func(palloc)
+cdecl_func(MemoryContextAlloc)
 cdecl_func(pfree)
 
 cdecl_func(heap_copy_tuple_as_datum)
@@ -361,5 +362,13 @@ cdecl_const(SPI_OK_REL_UNREGISTER)
 cdecl_const(SPI_OK_TD_REGISTER)
 #endif
 cdecl_func(get_language_name)
+
+//hash table
+cdecl_type(HASHACTION)
+cdecl_struct(HTAB);
+cdecl_type(HTAB);
+cdecl_func(hash_search)
+
+//
 
 cdecl_const(PG_VERSION_NUM)
