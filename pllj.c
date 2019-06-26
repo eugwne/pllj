@@ -6,6 +6,7 @@
 #include "utils/syscache.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
+#include "utils/memutils.h"
 
 #include "access/htup_details.h"
 #include "access/xact.h"
@@ -216,8 +217,6 @@ int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
     return result;
 }
 
-
-
 extern SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
 SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions){
     LJ_BEGIN_PG_TRY()
@@ -270,6 +269,7 @@ static void luatable_report(lua_State *L, int elevel)
 
 #define SAVED_VM (10)
 static lua_State *AL[SAVED_VM] = {NULL};
+static HTAB *shared_data = NULL;
 static int call_ref = 0;
 static int inline_ref = 0;
 static int validator_ref = 0;
@@ -278,6 +278,7 @@ volatile int call_depth = 0;
 
 static lua_State * get_vm() {
     int status;
+    void** udata;
     lua_State *L = lua_open();
 
     LUAJIT_VERSION_SYM();
@@ -292,6 +293,11 @@ static lua_State * get_vm() {
     lua_pushboolean(L, 0);
 #endif
     lua_setglobal(L, "__untrusted__");
+
+    udata = (void**) lua_newuserdata(L, sizeof(void*));
+    *udata = &shared_data;
+    lua_setglobal(L, "__shareddata__");
+
     lua_settop(L, 0);
 
     lua_gc(L, LUA_GCRESTART, -1);
@@ -480,9 +486,36 @@ PGDLLEXPORT Datum pllj_call_handler(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum pllj_inline_handler(PG_FUNCTION_ARGS);
 #endif
 
+//TODO check and remove
+static int
+_compare(const void *a, const void *b, size_t size)
+{
+    intptr_t left = *((intptr_t *) a);
+    intptr_t right = *((intptr_t *) b);
+    return (left == right) ? 1 : 0;
+}
+
+static void*
+_top_palloc(size_t size)
+{
+    return MemoryContextAlloc(TopMemoryContext, size);
+}
 
 PG_FUNCTION_INFO_V1(_PG_init);
 Datum _PG_init(PG_FUNCTION_ARGS) {
+    HASHCTL hash_ctl;
+    MemSet(&hash_ctl, 0, sizeof(hash_ctl));
+
+    hash_ctl.keysize = sizeof(intptr_t);
+    hash_ctl.entrysize = sizeof(void*);
+    hash_ctl.alloc = _top_palloc;
+    hash_ctl.match = _compare;
+
+    shared_data = hash_create("shared_data",
+                                16,
+                                &hash_ctl,
+                                HASH_ELEM | HASH_ALLOC | HASH_BLOBS | HASH_COMPARE );
+
     AL[0] = get_vm();
 #ifdef UNTRUSTED
     lua_getfield(AL[0], 1, "inlinehandler_u");

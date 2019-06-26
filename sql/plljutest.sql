@@ -6,14 +6,18 @@ print("LuaJIT unrestricted")
 $$ language pllju;
 
 do $$
-local f = require('pllj.func')
-local fn = f.find_function('quote_nullable(text)')
-print(fn("qwerty"))
-print(fn(nil))
+    ffi = require('ffi')
+$$ language pllju;
+
+do $$
+    local f = require('pllj.func')
+    local fn = f.find_function('quote_nullable(text)')
+    print(fn("qwerty"))
+    print(fn(nil))
 $$ language pllju;
 
 create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":5, "b":10}'::jsonb
+    select '{"a":5, "b":10}'::jsonb
 $$ language sql;
 
 do $$
@@ -22,16 +26,16 @@ do $$
 $$ language pllju;
 
 create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":50, "b":100}'::jsonb
+    select '{"a":50, "b":100}'::jsonb
 $$ language sql;
 
 do $$
-local get_json = load_function('pg_temp.get_json()')
-print(get_json())
+    local get_json = load_function('pg_temp.get_json()')
+    print(get_json())
 $$ language pllju;
 
 create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":5, "b":10}'::jsonb
+    select '{"a":5, "b":10}'::jsonb
 $$ language sql;
 
 do $$
@@ -41,7 +45,7 @@ do $$
 $$ language pllju;
 
 create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":50, "b":100}'::jsonb
+    select '{"a":50, "b":100}'::jsonb
 $$ language sql;
 
 CREATE or replace FUNCTION pg_temp.add(integer, integer) RETURNS integer
@@ -49,15 +53,69 @@ AS 'select $1 + $2;'
 LANGUAGE SQL;
 
 do $$
-    spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('plan pg_temp.add')
+    local plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('del')
+    intptr_counter = ffi.cast("int*", plan[1])
+    collectgarbage('collect')
+    print('ref_count ' .. intptr_counter[0])
+    plan = spi.find_plan('del')
+    print('ref_count ' .. intptr_counter[0])
+    collectgarbage('collect')
+    print('ref_count ' .. intptr_counter[0])
 $$ language pllju;
 
 do $$
-    local plan = spi.find_plan('plan pg_temp.add')
+    collectgarbage('stop')
+    local plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('p add')
+    intptr_counter = ffi.cast("int*", plan[1])
+$$ language pllju;
+
+do $$
+    print('ref_count ' .. intptr_counter[0])
+$$ language pllju;
+
+do $$
+    local plan = spi.find_plan('p add')
     local result = plan:exec(4, 7)
     for _, row in ipairs(result) do
       print(unpack(row))
     end
+$$ language pllju;
+
+do $$
+    print('ref_count ' .. intptr_counter[0])
+$$ language pllju;
+
+do $$
+    local plan = spi.find_plan('p add')
+    print(plan[1].base.ref_count)
+    print('++++++++++++')
+    collectgarbage('restart')
+    collectgarbage('collect')
+    print('-----------')
+    spi.free_plan('p add')
+    local result = plan:exec(4, 7)
+    print('1 == ' .. plan[1].base.ref_count)
+    for _, row in ipairs(result) do
+      print(unpack(row))
+    end
+$$ language pllju;
+
+do $$
+    local plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer")
+    intptr_counter = ffi.cast("int*", plan[1])
+    print('ref_count ' .. intptr_counter[0])
+    local p2 = plan:save_as('del2')
+    print('ref_count ' .. intptr_counter[0])
+    spi.free_plan('del2')
+    print('ref_count ' .. intptr_counter[0])
+    p2 = nil
+    collectgarbage('collect')
+    print('ref_count ' .. intptr_counter[0])
+    plan:exec(4, 7)
+    plan = nil
+    collectgarbage('collect')
+    print('dirty read freed memory, ref_count ' .. intptr_counter[0])
+
 $$ language pllju;
 
 do $$
