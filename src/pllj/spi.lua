@@ -20,6 +20,7 @@ local to_pg = require('pllj.io').to_pg
 local tuple_to_lua_1array = require('pllj.tuple_ops').tuple_to_lua_1array
 
 local get_oid_from_name = require('pllj.pg.type_info').get_oid_from_name
+local table_new = require('table.new')
 
 local _private = setmetatable({}, {__mode = "k"}) 
 
@@ -118,11 +119,8 @@ ffi.cdef[[
     } SharedPlan;
 ]]
 
-local hash_key = ffi.new('intptr_t[?]', 1)
-local found = ffi.new('bool[?]',1)
 local SharedPlan_ts = ffi.sizeof('SharedPlan')
 local Oid_ts = ffi.sizeof('Oid')
-local shared_ht = ffi.cast('HTAB***', __shareddata__)[0][0]
 
 local function _mc_alloc(size)
     return C.MemoryContextAlloc(C.TopMemoryContext, size)
@@ -170,40 +168,38 @@ local function _shared_from(raw)
 end
 
 function spi.find_plan(name)
-    assert(type(name)=='string' and #name < 8)
 
-    ffi.fill(hash_key, 8)
-    ffi.copy(hash_key, name, math.min(7,#name))
+    local result = C.uthash_find(tostring(name))
 
-    found[0] = false
+    if result ~= nil then
 
-    local result = ffi.cast('void**',C.hash_search(shared_ht, hash_key
-        , 0--HASH_FIND
-        , found))
-
-    if found[0] == true then
-        local p = _shared_from(result[0])
+        local p = _shared_from(result)
         return wrap_plan ({p})
     end
     return nil
 end
 
+local cb_data = { names = {}}
+local cb_key = function(key)
+    table.insert(cb_data.names, ffi.string(key))
+end
+local cb_key_c = ffi.cast("void (*) (const char *)", cb_key)
+
+function spi.get_saved_plan_names()
+    local size = tonumber(C.uthash_count())
+    cb_data.names = table_new(size, 0)
+    C.uthash_iter(cb_key_c)
+    return cb_data.names
+end
+
 function spi.free_plan(name)
-    assert(type(name)=='string' and #name < 8)
+    local sname = tostring(name)
+    local result = C.uthash_remove(sname)
 
-    ffi.fill(hash_key, 8)
-    ffi.copy(hash_key, name, math.min(7,#name))
-
-    found[0] = false
-
-    local result = ffi.cast('void**',C.hash_search(shared_ht, hash_key
-    , 2--HASH_REMOVE
-    , found))
-
-    if found[0] == true then
-        intrusive_ptr_release(result[0])
+    if result ~= nil then
+        intrusive_ptr_release(result)
     else
-        return error('free_plan not found: '..name)
+        return error('free_plan [' .. sname .. '] not found')
     end
 end
 
@@ -244,24 +240,14 @@ local function exec_plan(self, ...)
 end
 
 local function save_as(self, name)
-    assert(type(name)=='string' and #name < 8)
 
     local plan = unwrap_plan(self)[1]
 
-    hash_key[0] = 0
-
-    ffi.copy(hash_key, name, math.min(8, #name))
-
-    found[0] = false
-
-    local result = ffi.cast('void**', C.hash_search(shared_ht, ffi.cast('intptr_t*',hash_key), 3--[[HASH_ENTER_NULL]], found))
-    if result == nil then
-        return error('could not create entry for data structure')
-    end
-    if found[0] == true then
-        return error('plan ['..name..'] already exists')
+    local result = C.uthash_add(tostring(name), plan) 
+    if result == true then
+        intrusive_ptr_add_ref(plan)
     else
-        result[0] = intrusive_ptr_add_ref(plan)
+        return error('plan ['..name..'] already exists')
     end
     return self
 

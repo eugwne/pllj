@@ -1,3 +1,9 @@
+#include <uthash.h> //HASH_FUNCTION macro conflict
+#undef uthash_malloc
+#undef uthash_free
+#define uthash_malloc(sz) MemoryContextAlloc(TopMemoryContext, sz)
+#define uthash_free(ptr,sz) pfree(ptr)
+
 #include "postgres.h"
 #include "executor/spi.h"
 #include "commands/trigger.h"
@@ -269,16 +275,77 @@ static void luatable_report(lua_State *L, int elevel)
 
 #define SAVED_VM (10)
 static lua_State *AL[SAVED_VM] = {NULL};
-static HTAB *shared_data = NULL;
+
+typedef struct shared_data_struct_t {
+    const char *key;
+    void* value;
+    UT_hash_handle hh; /* makes this structure hashable */
+} shared_data_struct_t;
+
+static shared_data_struct_t *shared_data = NULL;
+
 static int call_ref = 0;
 static int inline_ref = 0;
 static int validator_ref = 0;
 extern volatile int call_depth;
 volatile int call_depth = 0;
 
+extern bool uthash_add(const char* key, void* value);
+bool uthash_add(const char* key, void* value)
+{
+    shared_data_struct_t *s, *tmp;
+    HASH_FIND_STR(shared_data, key, tmp);
+    if (tmp) return false;
+
+    s = (shared_data_struct_t *)MemoryContextAlloc(TopMemoryContext, sizeof(shared_data_struct_t));
+    s->key = MemoryContextStrdup(TopMemoryContext, key);
+    s->value = value;
+
+    HASH_ADD_KEYPTR(hh, shared_data, s->key, strlen(s->key), s);
+    return true;
+}
+
+extern void* uthash_find(const char* key);
+void* uthash_find(const char* key)
+{
+    shared_data_struct_t *s;
+    HASH_FIND_STR(shared_data, key, s);
+    if (!s) return NULL;
+    return s->value;
+}
+
+extern void* uthash_remove(const char* key);
+void* uthash_remove(const char* key)
+{
+    shared_data_struct_t *entry = NULL;
+    void* value = NULL;
+    HASH_FIND_STR(shared_data, key, entry);
+    if (!entry) return NULL;
+    HASH_DELETE(hh, shared_data, entry);
+    pfree((void*)entry->key);
+    value = entry->value;
+    pfree((void*)entry);
+    //caller should free it
+    return value;
+}
+
+extern unsigned uthash_count(void);
+unsigned uthash_count(void)
+{
+    return HASH_COUNT(shared_data);
+}
+
+extern void uthash_iter(void (*cb_key) (const char *name));
+void uthash_iter(void (*cb_key) (const char *name))
+{
+    shared_data_struct_t *s, *tmp;
+    HASH_ITER(hh, shared_data, s, tmp) {
+        cb_key(s->key);
+    }
+}
+
 static lua_State * get_vm() {
     int status;
-    void** udata;
     lua_State *L = lua_open();
 
     LUAJIT_VERSION_SYM();
@@ -293,10 +360,6 @@ static lua_State * get_vm() {
     lua_pushboolean(L, 0);
 #endif
     lua_setglobal(L, "__untrusted__");
-
-    udata = (void**) lua_newuserdata(L, sizeof(void*));
-    *udata = &shared_data;
-    lua_setglobal(L, "__shareddata__");
 
     lua_settop(L, 0);
 
@@ -486,36 +549,8 @@ PGDLLEXPORT Datum pllj_call_handler(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum pllj_inline_handler(PG_FUNCTION_ARGS);
 #endif
 
-//TODO check and remove
-static int
-_compare(const void *a, const void *b, size_t size)
-{
-    intptr_t left = *((intptr_t *) a);
-    intptr_t right = *((intptr_t *) b);
-    return (left == right) ? 1 : 0;
-}
-
-static void*
-_top_palloc(size_t size)
-{
-    return MemoryContextAlloc(TopMemoryContext, size);
-}
-
 PG_FUNCTION_INFO_V1(_PG_init);
 Datum _PG_init(PG_FUNCTION_ARGS) {
-    HASHCTL hash_ctl;
-    MemSet(&hash_ctl, 0, sizeof(hash_ctl));
-
-    hash_ctl.keysize = sizeof(intptr_t);
-    hash_ctl.entrysize = sizeof(void*);
-    hash_ctl.alloc = _top_palloc;
-    hash_ctl.match = _compare;
-
-    shared_data = hash_create("shared_data",
-                                16,
-                                &hash_ctl,
-                                HASH_ELEM | HASH_ALLOC | HASH_BLOBS | HASH_COMPARE );
-
     AL[0] = get_vm();
 #ifdef UNTRUSTED
     lua_getfield(AL[0], 1, "inlinehandler_u");
