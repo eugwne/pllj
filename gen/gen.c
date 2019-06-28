@@ -363,12 +363,4 @@ cdecl_const(SPI_OK_TD_REGISTER)
 #endif
 cdecl_func(get_language_name)
 
-//hash table
-cdecl_type(HASHACTION)
-cdecl_struct(HTAB);
-cdecl_type(HTAB);
-cdecl_func(hash_search)
-
-//
-
 cdecl_const(PG_VERSION_NUM)

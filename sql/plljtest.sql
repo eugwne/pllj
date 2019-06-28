@@ -147,11 +147,11 @@ AS 'select $1 + $2;'
 LANGUAGE SQL;
 
 do $$
-    spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('p add')
+    spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('plan pg_temp.add')
 $$ language pllj;
 
 CREATE or replace FUNCTION pg_temp.test_find_plan() RETURNS void AS $$
-    local plan = spi.find_plan('p add')
+    local plan = spi.find_plan('plan pg_temp.add')
     local result = plan:exec(4, 7)
     for _, row in ipairs(result) do
       print(unpack(row))
@@ -167,7 +167,7 @@ select pg_temp.test_find_plan();
 drop function pg_temp.add(integer, integer);
 
 do $$
-    local plan = spi.find_plan('p add')
+    local plan = spi.find_plan('plan pg_temp.add')
     local _, e = pcall(plan.exec, plan, 4, 7)
     print(string.find(e, "function pg_temp.add")~=nil and string.find(e, "does not exist")~=nil)
 $$ language pllj;

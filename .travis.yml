@@ -1,4 +1,5 @@
 before_install:
+- sudo apt-get -y install uthash-dev
 - wget -qO- https://github.com/openresty/luajit2/archive/v2.1-20190530.tar.gz | tar xvz
 - cd ./luajit2-2.1-20190530
 - make && sudo make install

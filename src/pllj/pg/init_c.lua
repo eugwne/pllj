@@ -35,6 +35,12 @@ lj_construct_md_array(Datum *elems,
 
 Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
 
+bool uthash_add(const char* key, void* value);
+void* uthash_find(const char* key);
+void* uthash_remove(const char* key);
+void uthash_iter(void (*cb_key) (const char *name));
+unsigned uthash_count(void);
+
 ]]
 
 local null_t, NULL, nullptr
