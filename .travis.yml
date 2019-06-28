@@ -68,7 +68,7 @@ script:
 - make && sudo make install && sudo make install-module && make installcheck
 - cat regression.diffs || true
 - make clean
-- export UNTRUSTED=1 
+- export PLLJ_UNTRUSTED=1 
 - make && sudo make install && sudo make install-module && make installcheck
 - cat regression.diffs || true
 after_success:

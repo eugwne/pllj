@@ -6,7 +6,7 @@ LUA_INCDIR ?= /usr/local/include/luajit-2.1
 LUALIB ?= -L/usr/local/lib -lluajit-5.1
 LUA_DIR ?= /usr/local/share/lua/5.1
 
-ifeq ($(UNTRUSTED), 1)
+ifeq ($(PLLJ_UNTRUSTED), 1)
     MODULE_big = pllju
     EXTENSION = pllju
     DATA = pllju--0.1.sql
@@ -32,8 +32,12 @@ pllj.o
 
 PG_CPPFLAGS = -I$(LUA_INCDIR) 
 
-ifeq ($(UNTRUSTED), 1)
-    PG_CPPFLAGS += -DUNTRUSTED
+ifeq ($(PLLJ_UNTRUSTED), 1)
+    PG_CPPFLAGS += -DPLLJ_UNTRUSTED
+endif
+
+ifeq ($(PLLJ_SKIP_LJVER_CHECK), 1)
+    PG_CPPFLAGS += -PLLJ_SKIP_LJVER_CHECK
 endif
 
 SHLIB_LINK = $(LUALIB)
