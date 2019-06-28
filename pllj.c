@@ -348,13 +348,15 @@ static lua_State * get_vm() {
     int status;
     lua_State *L = lua_open();
 
+#ifndef PLLJ_SKIP_LJVER_CHECK
     LUAJIT_VERSION_SYM();
+#endif
     lua_gc(L, LUA_GCSTOP, 0);
     luaL_openlibs(L);
     
     lua_pushvalue(L, LUA_GLOBALSINDEX);
     luaL_setfuncs(L, luaP_funcs, 0);
-#ifdef UNTRUSTED
+#ifdef PLLJ_UNTRUSTED
     lua_pushboolean(L, 1);
 #else
     lua_pushboolean(L, 0);
@@ -381,7 +383,7 @@ static lua_State * get_vm() {
 
 static lua_State *get_temp_state(){
     lua_State *L = get_vm();
-#ifdef UNTRUSTED
+#ifdef PLLJ_UNTRUSTED
     lua_getfield(L, 1, "inlinehandler_u");
     luaL_ref(L, LUA_REGISTRYINDEX);
     lua_getfield(L, 1, "callhandler_u");
@@ -539,7 +541,7 @@ Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bo
 
 PGDLLEXPORT Datum _PG_init(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum _PG_fini(PG_FUNCTION_ARGS);
-#ifdef UNTRUSTED
+#ifdef PLLJ_UNTRUSTED
 PGDLLEXPORT Datum pllj_validator_u(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum pllj_call_handler_u(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum pllj_inline_handler_u(PG_FUNCTION_ARGS);
@@ -552,7 +554,7 @@ PGDLLEXPORT Datum pllj_inline_handler(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(_PG_init);
 Datum _PG_init(PG_FUNCTION_ARGS) {
     AL[0] = get_vm();
-#ifdef UNTRUSTED
+#ifdef PLLJ_UNTRUSTED
     lua_getfield(AL[0], 1, "inlinehandler_u");
     inline_ref  = luaL_ref(AL[0], LUA_REGISTRYINDEX);
     lua_getfield(AL[0], 1, "callhandler_u");
@@ -581,7 +583,7 @@ Datum _PG_fini(PG_FUNCTION_ARGS) {
     PG_RETURN_VOID();
 }
 
-#ifdef UNTRUSTED
+#ifdef PLLJ_UNTRUSTED
 PG_FUNCTION_INFO_V1(pllj_validator_u);
 Datum pllj_validator_u(PG_FUNCTION_ARGS) {
     return lj_validator(fcinfo);
