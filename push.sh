@@ -1,3 +1,4 @@
+
 #!/bin/sh
 
 
@@ -8,7 +9,7 @@ setup_git() {
 
 commit_website_files() {
   git checkout -b $PGVERSION
-  git add src/pllj/pg/i.lua
+  git add src/pllj/pg/api_*.lua
   git commit --message "Travis build: $TRAVIS_BUILD_NUMBER [ci skip]"
 }
 

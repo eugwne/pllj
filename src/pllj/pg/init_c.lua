@@ -1,6 +1,14 @@
 local ffi = require('ffi')
 local C = ffi.C
-local all_types = require('pllj.pg.i').all_types
+
+ffi.cdef[[
+const char *
+GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged)
+]]
+local api_version = ffi.string(C.GetConfigOption('server_version_num', true, false))
+
+
+local all_types = (require('pllj.pg.api_'..api_version) or require('pllj.pg.i')).all_types
 ffi.cdef(all_types)
 
 ffi.cdef[[

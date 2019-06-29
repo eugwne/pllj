@@ -58,7 +58,7 @@ install-module:
 	cp src/pllj/io.lua $(LUA_DIR)/pllj/io.lua 
 	cp src/pllj/tuple_ops.lua $(LUA_DIR)/pllj/tuple_ops.lua 
 	cp src/pllj/pg/func.lua $(LUA_DIR)/pllj/pg/func.lua
-	cp src/pllj/pg/i.lua $(LUA_DIR)/pllj/pg/i.lua
+	cp src/pllj/pg/api_*.lua $(LUA_DIR)/pllj/pg
 	cp src/pllj/pg/macro.lua $(LUA_DIR)/pllj/pg/macro.lua
 	cp src/pllj/pg/pg_error.lua $(LUA_DIR)/pllj/pg/pg_error.lua
 	cp src/pllj/pg/syscache.lua $(LUA_DIR)/pllj/pg/syscache.lua
