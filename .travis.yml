@@ -23,6 +23,9 @@ before_install:
 - sudo echo "host    all         all         ::1/128               trust" >> /etc/postgresql/$PGVERSION/main/pg_hba.conf
 - sudo /etc/init.d/postgresql restart
 - if [ -f ./src/pllj/pg/i.lua ]; then exit 0; fi
+- psql -U postgres -A -t -c "show server_version;"
+- export PG_VERSION_STR=$(psql -U postgres -A -t -c "show server_version_num;")
+- echo ${PG_VERSION_STR}
 - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
 - gcc --version
 - sudo apt-get install gcc-5-plugin-dev
@@ -38,7 +41,7 @@ before_install:
 - gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua
   -I /usr/include/postgresql/$PGVERSION/server
 - gcc -S gen.c -fplugin=/usr/lib/gcc/x86_64-linux-gnu/5/plugin/gcclua.so -fplugin-arg-gcclua-script=generate.lua
-  -I /usr/include/postgresql/$PGVERSION/server > ../src/pllj/pg/i.lua
+  -I /usr/include/postgresql/$PGVERSION/server > ../src/pllj/pg/api_${PG_VERSION_STR}.lua
 - cd ../
 before_script:
 - createuser -U postgres -s travis
