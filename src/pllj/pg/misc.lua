@@ -6,7 +6,7 @@ local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 local function get_io_func(oid)
     local typeinfo = get_pg_typeinfo(oid)
     local free = typeinfo._free;
-    typeinfo = typeinfo.data
+    typeinfo = typeinfo.form_pg_type
     local inputf, outputf
     if typeinfo.typtype == C.TYPTYPE_BASE then
 

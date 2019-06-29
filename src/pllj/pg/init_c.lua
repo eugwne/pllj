@@ -1,6 +1,8 @@
 local ffi = require('ffi')
 local C = ffi.C
 
+local table_new = require('table.new')
+
 ffi.cdef[[
 const char *
 GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged)
@@ -79,8 +81,27 @@ nullptr = ffi.cast('void*', NULL)
 --NULL = ffi.new("void*")
 ffi.NULL = NULL
 
+local __pg_print
+__pg_print = function(...)
+    local args = {...}
+    local argc = #args
 
-print = function(text)
+    if argc < 2 then
+        local text = args[1]
+        C.errstart(C.INFO, "", 0, nil, nil)
+        C.errfinish(C.errmsg(tostring(text)))
+        return __pg_print
+    end
+    local tmp = table_new(argc * 2, 0)
+    table.insert(tmp, tostring(args[1]))
+    for k = 2, argc  do
+        table.insert(tmp, ' ')
+        table.insert(tmp, tostring(args[k]))
+    end
+    local output = table.concat(tmp)
     C.errstart(C.INFO, "", 0, nil, nil)
-    C.errfinish(C.errmsg(tostring(text)))
+    C.errfinish(C.errmsg(tostring(output)))
+    return __pg_print
 end
+
+print = __pg_print
