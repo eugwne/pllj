@@ -24,6 +24,6 @@ end
 
 
 return {
-  get_exception_text = get_exception_text,
-  throw_last_error = throw_last_error,
-  }
+    get_exception_text = get_exception_text,
+    throw_last_error = throw_last_error,
+}

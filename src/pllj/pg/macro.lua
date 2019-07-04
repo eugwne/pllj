@@ -123,6 +123,12 @@ local function get_typlenbyvalalign(typid)
     return {len = len[0], byval = byval[0], align = align[0]}
 end
 
+local function ReleaseTupleDesc(tupdesc)
+    if tupdesc.tdrefcount >= 0 then
+        C.DecrTupleDescRefCount(tupdesc)
+    end
+end
+
 return {
   GETSTRUCT = GETSTRUCT,
   PG_DETOAST_DATUM = PG_DETOAST_DATUM,
@@ -143,4 +149,5 @@ return {
   ARR_DIMS = ARR_DIMS,
   ARR_LBOUND = ARR_LBOUND,
   get_typlenbyvalalign = get_typlenbyvalalign,
+  ReleaseTupleDesc = ReleaseTupleDesc,
 }

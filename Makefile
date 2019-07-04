@@ -11,7 +11,8 @@ ifeq ($(PLLJ_UNTRUSTED), 1)
     EXTENSION = pllju
     DATA = pllju--0.1.sql
 REGRESS = \
-plljutest 
+plljutest \
+ucomposite
 
 else
     MODULE_big = pllj
@@ -22,7 +23,8 @@ REGRESS = \
 plljtest \
 type_string_conv \
 functional \
-arraytest
+arraytest \
+composite
 
 endif
 
@@ -66,6 +68,8 @@ install-module:
 	cp src/pllj/pg/type_info.lua $(LUA_DIR)/pllj/pg/type_info.lua
 	cp src/pllj/pg/misc.lua $(LUA_DIR)/pllj/pg/misc.lua
 	cp src/pllj/type/array[T].lua $(LUA_DIR)/pllj/type/array[T].lua
+	cp src/pllj/type/composite[T].lua $(LUA_DIR)/pllj/type/composite[T].lua
+	cp src/pllj/type/datum[T].lua $(LUA_DIR)/pllj/type/datum[T].lua
 	cp src/pllj/type/void.lua $(LUA_DIR)/pllj/type/void.lua
 	cp src/pllj/type/text.lua $(LUA_DIR)/pllj/type/text.lua
 	cp src/pllj/type/int2.lua $(LUA_DIR)/pllj/type/int2.lua
@@ -79,4 +83,5 @@ install-module:
 	cp src/pllj/type/int4array.lua $(LUA_DIR)/pllj/type/int4array.lua
 	cp src/pllj/type/int8array.lua $(LUA_DIR)/pllj/type/int8array.lua
 	cp src/pllj/type/textarray.lua $(LUA_DIR)/pllj/type/textarray.lua
+	cp src/pllj/type/rtti.lua $(LUA_DIR)/pllj/type/rtti.lua
 

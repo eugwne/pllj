@@ -41,7 +41,7 @@ $$ language sql;
 do $$
     g_json = find_function('pg_temp.get_json()')
     print(g_json())
-    print(type(g_json()[1]))
+    print(type(g_json()[-1]))
 $$ language pllju;
 
 create or replace function pg_temp.get_json() returns jsonb as $$

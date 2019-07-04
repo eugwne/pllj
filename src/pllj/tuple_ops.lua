@@ -1,9 +1,14 @@
 local ffi = require('ffi')
 local C = ffi.C
-local to_lua = require('pllj.io').to_lua
-local to_pg =require('pllj.io').to_pg
 local NULL = ffi.NULL
 local table_new = require('table.new')
+
+local to_lua
+local to_pg
+local function set_io(io)
+    to_lua = assert(io.to_lua)
+    to_pg = assert(io.to_pg)
+end
 
 local isNull = ffi.new("bool[?]", 1)
 local function tuple_to_lua_1array(tupleDesc, tuple)
@@ -87,8 +92,48 @@ local function lua_table_to_tuple(tupleDesc, table)
 
 end
 
+local function lua_table_to_tuple_2(tupleDesc, table, field_info)
+
+    local natts = tonumber(tupleDesc.natts)
+    local values = ffi.cast('Datum*', C.palloc(C.SIZEOF_DATUM * natts))
+    local nulls = ffi.cast('bool*', C.palloc(C.SIZEOF_BOOL * natts))
+    local attrs = tupleDesc.attrs
+    for k = 0, natts-1 do
+        local attr = attrs[k]
+        if (attr.attisdropped) then
+            values[k] = 0
+            nulls[k] = true;
+        else
+
+            local field = field_info[k+1]
+            local key = field[1]
+            local atttypid = field[2]
+
+            local iof = to_pg(atttypid)
+            local table_value = table[key]
+            local isnull = (table_value == nil or table_value == NULL)
+
+            if iof and not isnull then
+                values[k] = iof(table_value)
+                nulls[k] = false
+            else
+                values[k] = 0
+                nulls[k] = true
+            end
+        end
+    end
+
+    local result = C.heap_form_tuple(tupleDesc, values, nulls)
+    C.pfree(values)
+    C.pfree(nulls)
+    return result
+
+end
+
 return {
     tuple_to_lua_1array = tuple_to_lua_1array,
     tuple_to_lua_table = tuple_to_lua_table,
-    lua_table_to_tuple = lua_table_to_tuple
+    lua_table_to_tuple = lua_table_to_tuple,
+    lua_table_to_tuple_2 = lua_table_to_tuple_2,
+    set_io = set_io,
 }

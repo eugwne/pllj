@@ -32,6 +32,7 @@ local function get_func_from_oid(oid)
     local arguments = ''
     local targtypes = {}
     local proname = ffi.string(procst.proname.data) --'anonymous'
+
     if nargs > 0 then
         local vararg = false
         local nnames = ffi.new("int[?]", 1)

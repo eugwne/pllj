@@ -29,7 +29,8 @@
 #include <commands/trigger.h>
 
 #include <parser/parse_type.h>
-#include <funcapi.h> 
+#include <funcapi.h>
+#include <utils/typcache.h>
 
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
@@ -362,5 +363,13 @@ cdecl_const(SPI_OK_REL_UNREGISTER)
 cdecl_const(SPI_OK_TD_REGISTER)
 #endif
 cdecl_func(get_language_name)
+
+cdecl_func(lookup_rowtype_tupdesc_noerror)
+cdecl_func(CreateTupleDescCopyConstr)
+cdecl_func(BlessTupleDesc)
+cdecl_func(DecrTupleDescRefCount)
+cdecl_func(GetAttributeByNum)
+cdecl_func(HeapTupleHeaderGetDatum)
+
 
 cdecl_const(PG_VERSION_NUM)

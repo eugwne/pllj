@@ -1,0 +1,98 @@
+CREATE TYPE text_pair AS (first text, second text);
+CREATE OR REPLACE FUNCTION pg_temp.cmpz (g text_pair, f text) RETURNS text_pair AS $$
+  print(g)
+  print (string.format(f, g.first, g.second))
+  return g
+$$ LANGUAGE pllju;
+SELECT pg_temp.cmpz(('one', 'two'), '%s, %s!');
+INFO:  (one,two)
+INFO:  one, two!
+   cmpz    
+-----------
+ (one,two)
+(1 row)
+
+create type type1 as (a text, b int, c boolean);
+create type type2 as (a type1, b boolean);
+create type type3 as (a type2, b int);
+CREATE OR REPLACE FUNCTION pg_temp.cmpz2 (v type3) RETURNS type3 AS $$
+  print(v)
+  print ('v.b =', v.b)
+  print('v.a.b =', v.a.b)
+  print('v.a.a.c =', v.a.a.c)
+  print('v.a.a.b =', v.a.a.b)
+  print('v.a.a.a =', v.a.a.a)
+  v.a.a.a = 'updated value'
+  print('v.a.a.a =', v.a.a.a)
+  print(v)
+  return v
+$$ LANGUAGE pllju;
+SELECT pg_temp.cmpz2(((('testvalue',20,true), false), 10));
+INFO:  ("(""(testvalue,20,t)"",f)",10)
+INFO:  v.b = 10
+INFO:  v.a.b = f
+INFO:  v.a.a.c = t
+INFO:  v.a.a.b = 20
+INFO:  v.a.a.a = testvalue
+INFO:  v.a.a.a = updated value
+INFO:  ("(""(""""updated value"""",20,t)"",f)",10)
+                    cmpz2                    
+---------------------------------------------
+ ("(""(""""updated value"""",20,t)"",f)",10)
+(1 row)
+
+SELECT pg_temp.cmpz2(((('testvalue',null,true), null), 10));
+INFO:  ("(""(testvalue,,t)"",)",10)
+INFO:  v.b = 10
+INFO:  v.a.b = NULL
+INFO:  v.a.a.c = t
+INFO:  v.a.a.b = NULL
+INFO:  v.a.a.a = testvalue
+INFO:  v.a.a.a = updated value
+INFO:  ("(""(""""updated value"""",,t)"",)",10)
+                  cmpz2                   
+------------------------------------------
+ ("(""(""""updated value"""",,t)"",)",10)
+(1 row)
+
+CREATE OR REPLACE FUNCTION pg_temp.cmpz3 (v type3) RETURNS type3 AS $$
+  print(v)
+  print('v.b =', v.b)
+  print('v.a.b =', v.a.b)
+  print('v.a.a =', v.a.a)
+  print(v)
+  v.a.a = "('string value',40,false)"
+  assert(tostring(v) ~= '("(,f)",10)') 
+  print(v)
+  return v
+$$ LANGUAGE pllju;
+SELECT pg_temp.cmpz3(((null, false), 10));
+INFO:  ("(,f)",10)
+INFO:  v.b = 10
+INFO:  v.a.b = f
+INFO:  v.a.a = NULL
+INFO:  ("(,f)",10)
+INFO:  ("(""(""""'string value'"""",40,f)"",f)",10)
+                    cmpz3                     
+----------------------------------------------
+ ("(""(""""'string value'"""",40,f)"",f)",10)
+(1 row)
+
+CREATE OR REPLACE FUNCTION pg_temp.cmpz (g text_pair) RETURNS text_pair AS $$
+  print(g)
+  print (g.first)
+  print (g.second)
+  local f = g.first
+  g.first = g.second
+  g.second = f
+  return g
+$$ LANGUAGE pllju;
+SELECT pg_temp.cmpz(('one', null));
+INFO:  (one,)
+INFO:  one
+INFO:  NULL
+  cmpz  
+--------
+ (,one)
+(1 row)
+

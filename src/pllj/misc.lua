@@ -5,7 +5,6 @@ local function execute_list( list )
 end
 
 
-
 local Deferred = {}
 Deferred.__index = Deferred
   
@@ -34,7 +33,10 @@ local function protect(t)
     return setmetatable(env, mt) 
 end
 
+local shared_private = setmetatable({}, {__mode = "k"}) 
+
 return { 
     Deferred = Deferred,
     protect = protect,
- }
+    private = shared_private,
+}

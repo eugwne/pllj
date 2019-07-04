@@ -95,6 +95,10 @@ function pllj.callhandler(ctx)
         return 
     end
 
+    if func_struct.result_isset == true then
+        return error('NYI')
+    end
+
     local args = convert_to_lua_args(fcinfo, func_struct)
     -- TODO pcall?
     spi_opt.readonly = func_struct.readonly
@@ -103,7 +107,6 @@ function pllj.callhandler(ctx)
     local iof = to_pg(func_struct.result_type)
 
     if not iof then
-        --get_pg_typeinfo(func_struct.result_type)
         return error('no conversion for type ' .. tostring(func_struct.result_type))
     end
     if not result or result == NULL then
@@ -133,5 +136,6 @@ end
 pllj.validator_u = pllj.validator
 pllj.callhandler_u = pllj.callhandler
 pllj.inlinehandler_u = pllj.inlinehandler
+
 
 return pllj
