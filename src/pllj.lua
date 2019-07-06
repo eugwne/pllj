@@ -16,7 +16,6 @@ local pllj_func = require('pllj.func')
 local get_func_from_oid = pllj_func.get_func_from_oid
 local need_update = pllj_func.need_update
 
-local to_lua = require('pllj.io').to_lua
 local to_pg = require('pllj.io').to_pg
 local convert_to_lua_args = require('pllj.io').convert_to_lua_args
 
@@ -24,6 +23,7 @@ local FunctionCallInfo = ffi.typeof('FunctionCallInfo')
 local RefLJFunctionData = ffi.typeof('LJFunctionData *')
 
 local trigger_handler = require('pllj.trigger').trigger_handler
+local srf_handler = require('pllj.srf').srf_handler
 
 local function_cache = {}
 
@@ -96,7 +96,7 @@ function pllj.callhandler(ctx)
     end
 
     if func_struct.result_isset == true then
-        return error('NYI')
+        return srf_handler(func_struct, fcinfo, ctx_result)
     end
 
     local args = convert_to_lua_args(fcinfo, func_struct)

@@ -223,7 +223,7 @@ local function find_function( value, opt )
         elseif argc == 3 then
             mem = ffi.new('LOCAL_FCINFO_3[1]')
         else
-            return error('NYI')
+            mem = ffi.new('FCInfoMax[1]')
         end
         local fcinfo = mem[0].fcinfo
         finfo = ffi.cast('FunctionCallInfo', mem)
@@ -242,7 +242,7 @@ local function find_function( value, opt )
                 end
             end
         end
-    else
+    else --C.PG_VERSION_NUM < 120000
         finfo = ffi.new('struct FunctionCallInfoData')
         if fmgrInfo[0].fn_strict == true then
             init_args = function(args)
@@ -274,7 +274,7 @@ local function find_function( value, opt )
         --macro has no try catch
         --local result = macro.FunctionCallInvoke(finfo)
         _isok[0] = true
-        local result = C.lj_FunctionCallInvoke(finfo, _isok)
+        local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
         if _isok[0] == false then
             local e = pg_error.get_exception_text()
             return error("exec[".. (reg_name or funcoid).."] error:"..e)
@@ -303,15 +303,13 @@ env_add("find_function", find_function)
 
 --TODO: change it
 local _saved_functions = {}
-local function save_function(value, opt)
+
+local function load_function(value)
+    local found = _saved_functions[value]
+    if found then return found end
     local result = find_function(value, opt)
     _saved_functions[value] = result
     return result
-end
-env_add("save_function", save_function)
-
-local function load_function(value)
-    return _saved_functions[value]
 end
 env_add("load_function", load_function)
 
@@ -320,6 +318,5 @@ return {
     find_function = find_function,
     get_func_from_oid = get_func_from_oid,
     need_update = need_update,
-    save_function = save_function,
     load_function = load_function,
 }

@@ -7,6 +7,16 @@ assert(__untrusted__==false)
 print("Hello LuaJIT FFI")
 $$ language pllj;
 
+do $$
+print(nil)
+print(NULL)
+print(nil == nil)
+print(nil == NULL)
+print(NULL == NULL)
+print(NULL == nil)
+$$ language pllj;
+
+
 create table pg_temp.test(txt text);
 
 do $$

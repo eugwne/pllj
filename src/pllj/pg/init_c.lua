@@ -25,6 +25,7 @@ int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int call_depth;
 Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
 Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
+Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
 SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
 int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls, bool read_only, long count);
 
@@ -44,6 +45,11 @@ lj_construct_md_array(Datum *elems,
                     Oid elmtype, int elmlen, bool elmbyval, char elmalign);
 
 Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
+
+FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo);
+FuncCallContext *ljm_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo);
+Datum ljm_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
+Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
 
 bool uthash_add(const char* key, void* value);
 void* uthash_find(const char* key);

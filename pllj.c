@@ -16,6 +16,7 @@
 
 #include "access/htup_details.h"
 #include "access/xact.h"
+#include "funcapi.h"
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -202,6 +203,18 @@ Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
     return 0;
 }
 
+extern Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
+Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
+    Datum result;
+    SPI_push();
+    LJ_BEGIN_PG_TRY()
+        result = FunctionCallInvoke(fcinfo);
+        SPI_pop();
+        return result;
+    LJ_END_PG_TRY( {SPI_pop();*isok = false;})
+    return 0;
+}
+
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
 int lj_SPI_execute(const char *src, bool read_only, long tcount) {
     int result = 0;
@@ -250,6 +263,35 @@ lj_construct_md_array(Datum *elems,
     LJ_END_PG_TRY()
     return 0;
 }
+
+
+extern FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo);
+FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo)
+{
+    LJ_BEGIN_PG_TRY()
+        return SRF_FIRSTCALL_INIT();
+    LJ_END_PG_TRY()
+    return 0;
+}
+
+extern FuncCallContext *ljm_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo);
+FuncCallContext *ljm_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo)
+{
+    return SRF_PERCALL_SETUP();
+}
+
+extern Datum ljm_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
+Datum ljm_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
+{
+    SRF_RETURN_DONE(funcctx);
+}
+
+extern Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
+Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
+{
+    SRF_RETURN_NEXT(funcctx, 0);
+}
+
 
 static void luatable_report(lua_State *L, int elevel)
 {
@@ -344,6 +386,7 @@ void uthash_iter(void (*cb_key) (const char *name))
     }
 }
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
 static lua_State * get_vm() {
     int status;
     lua_State *L = lua_open();
@@ -362,6 +405,9 @@ static lua_State * get_vm() {
     lua_pushboolean(L, 0);
 #endif
     lua_setglobal(L, "__untrusted__");
+
+    lua_pushinteger(L, MAX(0, call_depth-1));
+    lua_setglobal(L, "__depth__");
 
     lua_settop(L, 0);
 

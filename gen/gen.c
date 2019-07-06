@@ -305,6 +305,7 @@ cdecl_const(FLOAT8ARRAYOID)
 cdecl_const(INT2ARRAYOID)
 cdecl_const(INT4ARRAYOID)
 cdecl_const(TEXTARRAYOID)
+cdecl_const(BOOLOID)
 
 //cdecl_func(stringToQualifiedNameList)
 cdecl_func(parseTypeString)
@@ -370,6 +371,9 @@ cdecl_func(BlessTupleDesc)
 cdecl_func(DecrTupleDescRefCount)
 cdecl_func(GetAttributeByNum)
 cdecl_func(HeapTupleHeaderGetDatum)
+
+cdecl_struct(FuncCallContext)
+cdecl_type(FuncCallContext)
 
 
 cdecl_const(PG_VERSION_NUM)

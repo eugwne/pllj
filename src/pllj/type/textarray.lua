@@ -20,8 +20,11 @@ return {
     to_lua = to_lua_T(text_t),
 
     to_datum = function(lv)
+        if lv == NULL then
+            return ffi.cast('Datum', 0), true
+        end
         if type(lv) == "string" then
-            return INPUT(lv)
+            return INPUT(lv), false
         end
         return to_datum(lv)
     end,

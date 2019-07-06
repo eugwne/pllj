@@ -9,7 +9,7 @@ select '{"a":5, "b":10}'::jsonb
 $$ language sql;
 
 do $$
-    local get_json = save_function('pg_temp.get_json()')
+    local get_json = load_function('pg_temp.get_json()')
     print(get_json())
 $$ language pllj;
 
@@ -42,3 +42,43 @@ print(fn('1',nil,'3'))
 print(fn('1','2','3'))
 print(fn(nil,'2','3'))
 $$ language pllj;
+
+
+CREATE or replace FUNCTION pg_temp.arg_count(a1 integer,a2 integer,a3 integer,a4 integer,a5 integer
+,a6 integer,a7 integer,a8 integer,a9 integer,a10 integer
+,a11 integer,a12 integer,a13 integer,a14 integer,a15 integer ) returns integer AS
+$$
+begin
+return a1+a2+a3+a4+a5+a6+a7+a8+a9+a10+a11+a12+a13+a14+a15;
+end
+$$
+LANGUAGE plpgsql;
+
+do $$
+  local f = find_function([[pg_temp.arg_count(integer, integer, integer, integer, integer,
+  integer, integer, integer, integer, integer, 
+  integer, integer, integer, integer, integer ) ]]);
+  print(f(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15))
+$$ language pllj;
+
+CREATE TYPE pg_temp._pair AS (first text, second text);
+CREATE OR REPLACE FUNCTION pg_temp.get_pair () RETURNS pg_temp._pair AS $$
+select '("one","two")'::pg_temp._pair;
+$$ LANGUAGE sql;
+
+select pg_temp.get_pair ();
+
+do $$
+local f = find_function('pg_temp.get_pair ()')
+local result = f()
+print(result.first)
+print(result.second)
+$$ language pllj;
+
+-- do $$
+-- local f = find_function('generate_series(int,int)')
+-- for rr in f(2,5) do
+-- 	print(rr)
+-- end
+-- $$ language pllj;
+

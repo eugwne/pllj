@@ -10,7 +10,10 @@ return {
     end,
 
     to_datum = function(lv)
-        return C.ljm_Float8GetDatum(ffi.cast('float8',tonumber(lv)))
+        if (lv == NULL) then
+            return ffi.cast('Datum', 0), true
+        end
+        return C.ljm_Float8GetDatum(ffi.cast('float8',tonumber(lv))), false
     end,
 
 }
