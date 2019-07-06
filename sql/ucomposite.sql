@@ -35,8 +35,16 @@ CREATE OR REPLACE FUNCTION pg_temp.cmpz3 (v type3) RETURNS type3 AS $$
   print('v.a.a =', v.a.a)
   print(v)
   v.a.a = "('string value',40,false)"
+  v.a.a.b = 50
   assert(tostring(v) ~= '("(,f)",10)') 
   print(v)
+  v.a.a = { a = 'text value', b = 123, c = true}
+  print(v)
+  v.a = { 
+      a = { a = 'value2', b = 321, c = false},
+      b = false
+      }
+print(v)
   return v
 $$ LANGUAGE pllju;
 SELECT pg_temp.cmpz3(((null, false), 10));

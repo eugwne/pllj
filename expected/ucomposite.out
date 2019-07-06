@@ -30,8 +30,8 @@ $$ LANGUAGE pllju;
 SELECT pg_temp.cmpz2(((('testvalue',20,true), false), 10));
 INFO:  ("(""(testvalue,20,t)"",f)",10)
 INFO:  v.b = 10
-INFO:  v.a.b = f
-INFO:  v.a.a.c = t
+INFO:  v.a.b = false
+INFO:  v.a.a.c = true
 INFO:  v.a.a.b = 20
 INFO:  v.a.a.a = testvalue
 INFO:  v.a.a.a = updated value
@@ -45,7 +45,7 @@ SELECT pg_temp.cmpz2(((('testvalue',null,true), null), 10));
 INFO:  ("(""(testvalue,,t)"",)",10)
 INFO:  v.b = 10
 INFO:  v.a.b = NULL
-INFO:  v.a.a.c = t
+INFO:  v.a.a.c = true
 INFO:  v.a.a.b = NULL
 INFO:  v.a.a.a = testvalue
 INFO:  v.a.a.a = updated value
@@ -62,20 +62,30 @@ CREATE OR REPLACE FUNCTION pg_temp.cmpz3 (v type3) RETURNS type3 AS $$
   print('v.a.a =', v.a.a)
   print(v)
   v.a.a = "('string value',40,false)"
+  v.a.a.b = 50
   assert(tostring(v) ~= '("(,f)",10)') 
   print(v)
+  v.a.a = { a = 'text value', b = 123, c = true}
+  print(v)
+  v.a = { 
+      a = { a = 'value2', b = 321, c = false},
+      b = false
+      }
+print(v)
   return v
 $$ LANGUAGE pllju;
 SELECT pg_temp.cmpz3(((null, false), 10));
 INFO:  ("(,f)",10)
 INFO:  v.b = 10
-INFO:  v.a.b = f
+INFO:  v.a.b = false
 INFO:  v.a.a = NULL
 INFO:  ("(,f)",10)
-INFO:  ("(""(""""'string value'"""",40,f)"",f)",10)
-                    cmpz3                     
-----------------------------------------------
- ("(""(""""'string value'"""",40,f)"",f)",10)
+INFO:  ("(""(""""'string value'"""",50,f)"",f)",10)
+INFO:  ("(""(""""text value"""",123,t)"",f)",10)
+INFO:  ("(""(value2,321,f)"",f)",10)
+             cmpz3             
+-------------------------------
+ ("(""(value2,321,f)"",f)",10)
 (1 row)
 
 CREATE OR REPLACE FUNCTION pg_temp.cmpz (g text_pair) RETURNS text_pair AS $$

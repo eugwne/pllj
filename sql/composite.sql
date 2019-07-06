@@ -17,6 +17,10 @@ CREATE OR REPLACE FUNCTION pg_temp.cmpz2 (v type3) RETURNS type3 AS $$
   print('v.a.a.c =', v.a.a.c)
   print('v.a.a.b =', v.a.a.b)
   print('v.a.a.a =', v.a.a.a)
+    v.a = { 
+      a = { a = 'value2', b = 321, c = false},
+      b = false
+      }
   return v
 $$ LANGUAGE pllj;
 SELECT pg_temp.cmpz2(((('testvalue',20,true), false), 10));

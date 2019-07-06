@@ -21,7 +21,7 @@ create or replace function pg_temp.get_json() returns jsonb as $$
 $$ language sql;
 
 do $$
-    local get_json = save_function('pg_temp.get_json()')
+    local get_json = load_function('pg_temp.get_json()')
     print(get_json())
 $$ language pllju;
 

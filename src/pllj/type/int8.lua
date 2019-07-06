@@ -11,11 +11,15 @@ return {
     end,
 
     to_datum = function(lv)
+        if (lv == NULL) then
+            return ffi.cast('Datum', 0), true
+        end
+
         if type(lv) == "cdata" and ffi.istype('int64_t', lv) then
-            return ffi.cast('Datum', lv)
+            return ffi.cast('Datum', lv), false
         end
         
-        return ffi.cast('Datum', tonumber(lv))
+        return ffi.cast('Datum', tonumber(lv)), false
     end,
 
 }

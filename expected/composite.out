@@ -22,17 +22,21 @@ CREATE OR REPLACE FUNCTION pg_temp.cmpz2 (v type3) RETURNS type3 AS $$
   print('v.a.a.c =', v.a.a.c)
   print('v.a.a.b =', v.a.a.b)
   print('v.a.a.a =', v.a.a.a)
+    v.a = { 
+      a = { a = 'value2', b = 321, c = false},
+      b = false
+      }
   return v
 $$ LANGUAGE pllj;
 SELECT pg_temp.cmpz2(((('testvalue',20,true), false), 10));
 INFO:  ("(""(testvalue,20,t)"",f)",10)
 INFO:  v.b = 10
-INFO:  v.a.b = f
-INFO:  v.a.a.c = t
+INFO:  v.a.b = false
+INFO:  v.a.a.c = true
 INFO:  v.a.a.b = 20
 INFO:  v.a.a.a = testvalue
-              cmpz2              
----------------------------------
- ("(""(testvalue,20,t)"",f)",10)
+             cmpz2             
+-------------------------------
+ ("(""(value2,321,f)"",f)",10)
 (1 row)
 

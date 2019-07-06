@@ -4,6 +4,20 @@ assert(__untrusted__==false)
 print("Hello LuaJIT FFI")
 $$ language pllj;
 INFO:  Hello LuaJIT FFI
+do $$
+print(nil)
+print(NULL)
+print(nil == nil)
+print(nil == NULL)
+print(NULL == NULL)
+print(NULL == nil)
+$$ language pllj;
+INFO:  nil
+INFO:  NULL
+INFO:  true
+INFO:  true
+INFO:  true
+INFO:  true
 create table pg_temp.test(txt text);
 do $$
 spi.execute("insert into pg_temp.test(txt) values('qwerty')")

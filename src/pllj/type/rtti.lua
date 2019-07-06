@@ -34,6 +34,7 @@ local C = ffi.C
         local tuple_desc = composite[1] 
         local field_info = composite[2]
         local field_count = composite[3]
+        local field_name_oid = composite[4]
 
         local in_out = ffi.new("FmgrInfo[?]", 2)
         C.fmgr_info_cxt(form_pg_type.typinput, in_out[0], C.TopMemoryContext);
@@ -43,7 +44,7 @@ local C = ffi.C
             [1] = oid,
             [2] = form_pg_type,
             [3] = in_out,
-            [4] = {tuple_desc, field_info, field_count}
+            [4] = {tuple_desc, field_info, field_count, field_name_oid}
         }
         __rtti[oid] = found
     end

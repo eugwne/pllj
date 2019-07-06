@@ -11,7 +11,10 @@ return {
     end,
 
     to_datum = function(lv)
-        return ffi.cast('Datum', macro.SET_4_BYTES(tonumber(lv)))
+        if (lv == NULL) then
+            return ffi.cast('Datum', 0), true
+        end
+        return ffi.cast('Datum', macro.SET_4_BYTES(tonumber(lv))), false
     end,
 
 }

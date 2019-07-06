@@ -26,6 +26,7 @@ end
 
 add_io(require('pllj.type.void'))
 add_io(require('pllj.type.text'))
+add_io(require('pllj.type.bool'))
 add_io(require('pllj.type.int2'))
 add_io(require('pllj.type.int4'))
 add_io(require('pllj.type.int8'))

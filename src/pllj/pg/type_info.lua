@@ -33,16 +33,18 @@ local function get_pg_typeinfo(oid)
 
             local field_count = tuple_desc.natts
             local field_info = table_new(field_count, 0)
+            local field_name_oid = table_new(0, field_count)
             for k = 0, field_count-1 do
                 local attr = tuple_desc.attrs[k]
                 local attname = (ffi.string(ffi.cast('const char *', attr.attname)))
-
+                local atttypid = tonumber(attr.atttypid)
                 table.insert(field_info, {
                     attname, --1
-                    tonumber(attr.atttypid),
+                    atttypid,
                 });
+                field_name_oid[attname] = atttypid
             end
-            composite = {tuple_desc, field_info, field_count}
+            composite = {tuple_desc, field_info, field_count, field_name_oid}
 
         end
 

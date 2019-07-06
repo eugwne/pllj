@@ -84,6 +84,24 @@ local function to_lua_T(T)
     return result
 end 
 
+local function string_to_rawdatum_rtti(rtti, value)
+    local form_pg_type = rtti[2]
+    assert (type(value) == "string")
+    local inoid = rtti[1]
+    if form_pg_type.typelem ~=0 then
+        inoid = form_pg_type.typelem
+    end
+    local text = tostring(value)
+    local prev = C.CurrentMemoryContext
+    C.CurrentMemoryContext = C.CurTransactionContext
+
+    local datum = C.lj_InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
+    pg_error.throw_last_error();
+    C.CurrentMemoryContext = prev
+
+    return datum
+end
+
 local function string_to_datum_T(T)
     local oid = assert(T.oid)
     local rtti = assert(get_rtti(oid))
@@ -92,25 +110,22 @@ local function string_to_datum_T(T)
     local result
 
     result = function (value)
-        if (type(value) == "string") then
-            local inoid = oid
-            if form_pg_type.typelem ~=0 then
-                inoid = form_pg_type.typelem
-            end
-            local text = tostring(value)
-            local prev = C.CurrentMemoryContext
-            C.CurrentMemoryContext = C.CurTransactionContext
-
-            local datum = C.lj_InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
-            pg_error.throw_last_error();
-            C.CurrentMemoryContext = prev
-
-            return datum
-        else
-            return error('NYI')
+        assert (type(value) == "string")
+        local inoid = oid
+        if form_pg_type.typelem ~=0 then
+            inoid = form_pg_type.typelem
         end
-    end
+        local text = tostring(value)
+        local prev = C.CurrentMemoryContext
+        C.CurrentMemoryContext = C.CurTransactionContext
 
+        local datum = C.lj_InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
+        pg_error.throw_last_error();
+        C.CurrentMemoryContext = prev
+
+        return datum
+
+    end
 
     return result
 
@@ -130,6 +145,11 @@ local function to_datum_T(T)
                 return rawget(unwrap_datum(value), -1)
             elseif( mt == composite_t.mt) then
                 return composite_t.to_datum(unwrap_datum(value))
+            else
+                local rtti = get_rtti(oid)
+                if (rtti[4]~=nil) then --composite data
+                    return composite_t.table_to_datum_rtti(value, rtti)
+                end
             end
             return error('NYI')
         else 
@@ -139,6 +159,10 @@ local function to_datum_T(T)
 
     return result
 end
+
+composite_t.set_datum_ops({
+    string_to_rawdatum_rtti = string_to_rawdatum_rtti,
+})
 
 return {
     to_lua_T = to_lua_T,
