@@ -125,14 +125,7 @@ cdecl_type(FunctionCallInfoBaseData)
 		FunctionCallInfoBaseData fcinfo; \
 		char fcinfo_data[SizeForFunctionCallInfo(nargs)]; \
 	} name; 
-LOCAL_FCINFO_TYPE(LOCAL_FCINFO_0, 0)
-cdecl_type(LOCAL_FCINFO_0)
-LOCAL_FCINFO_TYPE(LOCAL_FCINFO_1, 1)
-cdecl_type(LOCAL_FCINFO_1)
-LOCAL_FCINFO_TYPE(LOCAL_FCINFO_2, 2)
-cdecl_type(LOCAL_FCINFO_2)
-LOCAL_FCINFO_TYPE(LOCAL_FCINFO_3, 3)
-cdecl_type(LOCAL_FCINFO_3)
+
 LOCAL_FCINFO_TYPE(FCInfoMax, FUNC_MAX_ARGS)
 cdecl_type(FCInfoMax)
 
@@ -372,8 +365,15 @@ cdecl_func(DecrTupleDescRefCount)
 cdecl_func(GetAttributeByNum)
 cdecl_func(HeapTupleHeaderGetDatum)
 
+cdecl_struct(ExprContext)
+cdecl_type(ExprContext)
 cdecl_struct(FuncCallContext)
 cdecl_type(FuncCallContext)
+cdecl_struct(ReturnSetInfo)
+cdecl_type(ReturnSetInfo)
+cdecl_func(RegisterExprContextCallback)
+cdecl_func(UnregisterExprContextCallback)
+
 
 
 cdecl_const(PG_VERSION_NUM)

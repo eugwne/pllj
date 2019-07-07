@@ -205,6 +205,7 @@ Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
 
 extern Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
 Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
+#if PG_VERSION_NUM < 100000
     Datum result;
     SPI_push();
     LJ_BEGIN_PG_TRY()
@@ -213,6 +214,9 @@ Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
         return result;
     LJ_END_PG_TRY( {SPI_pop();*isok = false;})
     return 0;
+#else
+    return lj_FunctionCallInvoke(fcinfo, isok);
+#endif
 }
 
 extern int lj_SPI_execute(const char *src, bool read_only, long tcount);

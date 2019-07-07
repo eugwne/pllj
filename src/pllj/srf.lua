@@ -31,6 +31,18 @@ local function SRF_RETURN_NEXT(fcinfo, funcctx)
     return C.ljm_SRF_RETURN_NEXT(fcinfo, funcctx);
 end
 
+local cb_expr_context = function(datum)
+    local coindex = tonumber(ffi.cast('int64_t', datum))
+    SRF[coindex] = nil
+end
+local cb_expr_context_c = ffi.cast("void (*) (Datum)", cb_expr_context)
+
+local function remove_co(fcinfo, coindex)
+    SRF[coindex] = nil
+    local rsi = ffi.cast('ReturnSetInfo*', fcinfo.resultinfo);
+    C.UnregisterExprContextCallback(rsi.econtext, cb_expr_context_c, ffi.cast('Datum', coindex));
+end
+
 local function srf_handler(func_struct, fcinfo, ctx_result)
     local funcctx
     if SRF_IS_FIRSTCALL(fcinfo) then
@@ -39,26 +51,29 @@ local function srf_handler(func_struct, fcinfo, ctx_result)
         local prev = C.CurrentMemoryContext
         C.CurrentMemoryContext = funcctx.multi_call_memory_ctx
 
-        srf_index = srf_index + 1
-        funcctx.user_fctx = ffi.cast('void*', srf_index)
-        
         local iof = to_pg(func_struct.result_type)
+        C.CurrentMemoryContext = prev
 
         if not iof then
             return error('no conversion for type ' .. tostring(func_struct.result_type))
         end
 
+        srf_index = srf_index + 1
+        funcctx.user_fctx = ffi.cast('void*', srf_index)
         SRF[srf_index] = {coroutine.create(func_struct.func), convert_to_lua_args(fcinfo, func_struct), iof}
 
-        C.CurrentMemoryContext = prev
+        local rsi = ffi.cast('ReturnSetInfo*', fcinfo.resultinfo);
+        C.RegisterExprContextCallback(rsi.econtext, cb_expr_context_c, ffi.cast('Datum', srf_index));
+        
     end
+
     funcctx = SRF_PERCALL_SETUP(fcinfo);
     local coindex = tonumber(ffi.cast('int',funcctx.user_fctx))
     local co = SRF[coindex][1]
     spi_opt.readonly = func_struct.readonly
 
     if coroutine.status(co) ==  "suspended" then --(funcctx.call_cntr < funcctx.max_calls)   
-        local srf_data = SRF[srf_index]
+        local srf_data = SRF[coindex]
         local args
         local status, result
         local iof = srf_data[3]
@@ -71,7 +86,7 @@ local function srf_handler(func_struct, fcinfo, ctx_result)
         end 
         if status == true then
             if coroutine.status(co) ==  "dead" then
-                SRF[coindex] = nil
+                remove_co(fcinfo, coindex)
                 ctx_result[0] =  SRF_RETURN_DONE(fcinfo, funcctx);
                 return
             end
@@ -84,13 +99,13 @@ local function srf_handler(func_struct, fcinfo, ctx_result)
             SRF_RETURN_NEXT(fcinfo, funcctx)
             return
         else
-            SRF[coindex] = nil
+            remove_co(fcinfo, coindex)
             return error(result)
         end
 
     else
         --not expected to be here
-        SRF[coindex] = nil
+        remove_co(fcinfo, coindex)
         ctx_result[0] =  SRF_RETURN_DONE(fcinfo, funcctx);
         return
     end

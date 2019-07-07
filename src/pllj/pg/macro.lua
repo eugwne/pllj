@@ -129,6 +129,14 @@ local function ReleaseTupleDesc(tupdesc)
     end
 end
 
+local SizeForFunctionCallInfo
+if C.PG_VERSION_NUM >= 120000 then
+    SizeForFunctionCallInfo = function (nargs)
+        local size = ffi.offsetof('FunctionCallInfoBaseData', 'args') + ffi.sizeof('NullableDatum') * nargs
+        return size
+    end
+end
+
 return {
   GETSTRUCT = GETSTRUCT,
   PG_DETOAST_DATUM = PG_DETOAST_DATUM,
@@ -150,4 +158,5 @@ return {
   ARR_LBOUND = ARR_LBOUND,
   get_typlenbyvalalign = get_typlenbyvalalign,
   ReleaseTupleDesc = ReleaseTupleDesc,
+  SizeForFunctionCallInfo = SizeForFunctionCallInfo,
 }
