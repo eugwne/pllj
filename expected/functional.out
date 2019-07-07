@@ -19,7 +19,7 @@ $$ language sql;
 do $$
 local get_json = load_function('pg_temp.get_json()')
 print(get_json())
-print(type(get_json()[1]))
+print(type(get_json()[-1]))
 $$ language pllj;
 INFO:  {"a": 50, "b": 100}
 INFO:  nil
@@ -78,9 +78,25 @@ print(result.second)
 $$ language pllj;
 INFO:  one
 INFO:  two
--- do $$
--- local f = find_function('generate_series(int,int)')
--- for rr in f(2,5) do
--- 	print(rr)
--- end
--- $$ language pllj;
+do $$
+local f = find_function('generate_series(int,int)')
+for rr in f(1,3) do
+
+	for rr in f(41,43) do
+		print(rr)
+	end
+	print(rr)
+end
+$$ language pllj;
+INFO:  41
+INFO:  42
+INFO:  43
+INFO:  1
+INFO:  41
+INFO:  42
+INFO:  43
+INFO:  2
+INFO:  41
+INFO:  42
+INFO:  43
+INFO:  3

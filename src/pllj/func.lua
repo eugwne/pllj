@@ -137,6 +137,77 @@ local function set_memorycontext(m)
     C.CurrentMemoryContext = m
 end
 
+local init_arguments
+local FunctionCallInfo_create
+if --[[------------------------------------------------------------]] C.PG_VERSION_NUM >= 120000 then
+    init_arguments = function (strict)
+        if strict then
+            return function(args, argc, argtypes, info)
+                for i = 0, argc - 1 do
+                    local ref_arg = info.args[i]
+                    ref_arg.value,  ref_arg.isnull = to_pg(argtypes[0][i])(args[i+1])
+                    if ref_arg.isnull == true then return error('strict function null arg['..tostring(i)..']') end
+                end
+            end
+        else
+            return function(args, argc, argtypes, info)
+                for i = 0, argc - 1 do
+                    info.args[i].value,  info.args[i].isnull = to_pg(argtypes[0][i])(args[i+1])
+                end
+            end
+        end
+    end
+
+    FunctionCallInfo_create = function(argc)
+        local mem = ffi.new('char[?]', macro.SizeForFunctionCallInfo(argc))
+        local finfo = ffi.cast('FunctionCallInfo', mem)
+        return finfo, mem
+    end
+
+elseif --[[------------------------------------------------------------]] C.PG_VERSION_NUM < 120000 then
+    init_arguments = function (strict)
+        if strict then
+            return function(args, argc, argtypes, info)
+                ffi.fill(info.argnull, argc)
+                for i = 0, argc - 1 do
+                    info.arg[i], info.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
+                    if info.argnull[i] == true then return error('strict function null arg['..tostring(i)..']') end
+                end
+            end
+        else
+            return function(args, argc, argtypes, info)
+                ffi.fill(info.argnull, argc)
+                for i = 0, argc - 1 do
+                    info.arg[i], info.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
+                end
+            end
+        end
+    end
+
+    FunctionCallInfo_create = function(argc)
+        return ffi.new('struct FunctionCallInfoData'), true
+    end
+end
+
+
+local enum_NodeTag = ffi.new('struct enum_NodeTag');
+local function srf_result_info_new()
+                    
+    local fcontext = ffi.new('pgfunc_srf')
+    ffi.fill(fcontext.econtext, ffi.sizeof('ExprContext'))
+    fcontext.econtext.ecxt_per_query_memory = C.CurrentMemoryContext;
+    local rsinfo = fcontext.rsinfo;
+    rsinfo.type = enum_NodeTag.T_ReturnSetInfo;
+    rsinfo.econtext = fcontext.econtext;
+    rsinfo.allowedModes = 1; --SFRM_ValuePerCall
+    rsinfo.returnMode = 1; --SFRM_ValuePerCall;
+    rsinfo.setResult = nil;
+    rsinfo.setDesc = nil;
+
+    return fcontext
+end
+
+local function noop() end
 local function find_function( value, opt )
     local prev = C.CurrentMemoryContext
     local d = Deferred.create()
@@ -150,9 +221,10 @@ local function find_function( value, opt )
         , argmodes
         , argc
         , finfo
+        , anchor
         , func
-        , init_args
         , prorettype
+        , fn_init_args
     local fmgrInfo = 0
     local _isok
     if type(value) == 'number' then
@@ -202,87 +274,68 @@ local function find_function( value, opt )
     
     argc = C.get_func_arg_info(proc, argtypes, argnames, argmodes);
 
-    if (procst.proretset) then
-        error_text = "proretset NYI" 
-        goto fail
-    else
+    if not procst.proretset then
         fmgrInfo = ffi.new("FmgrInfo[?]", 1)
         C.fmgr_info_cxt(funcoid, fmgrInfo, C.CurrentMemoryContext);
-    end
+        fn_init_args = init_arguments(fmgrInfo[0].fn_strict == true)
+        finfo, anchor = FunctionCallInfo_create(argc)
 
-    
-    if C.PG_VERSION_NUM >= 120000 then
-        --TODO argc
-        local mem
-        if argc == 0 then
-            mem = ffi.new('LOCAL_FCINFO_0[1]')
-        elseif argc == 1 then
-            mem = ffi.new('LOCAL_FCINFO_1[1]')
-        elseif argc == 2 then
-            mem = ffi.new('LOCAL_FCINFO_2[1]')
-        elseif argc == 3 then
-            mem = ffi.new('LOCAL_FCINFO_3[1]')
-        else
-            mem = ffi.new('FCInfoMax[1]')
-        end
-        local fcinfo = mem[0].fcinfo
-        finfo = ffi.cast('FunctionCallInfo', mem)
-        if fmgrInfo[0].fn_strict == true then
-            init_args = function(args)
-                local ref_arg = fcinfo.args[i]
-                for i = 0, argc - 1 do
-                    ref_arg.value,  ref_arg.isnull = to_pg(argtypes[0][i])(args[i+1])
-                    if ref_arg.isnull == true then return error('strict function null arg['..tostring(i)..']') end
-                end
-            end
-        else
-            init_args = function(args)
-                for i = 0, argc - 1 do
-                    fcinfo.args[i].value,  fcinfo.args[i].isnull = to_pg(argtypes[0][i])(args[i+1])
-                end
-            end
-        end
-    else --C.PG_VERSION_NUM < 120000
-        finfo = ffi.new('struct FunctionCallInfoData')
-        if fmgrInfo[0].fn_strict == true then
-            init_args = function(args)
-                ffi.fill(finfo.argnull, argc)
-                for i = 0, argc - 1 do
-                    finfo.arg[i], finfo.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
-                    if finfo.argnull[i] == true then return error('strict function null arg['..tostring(i)..']') end
-                end
-            end
-        else
-            init_args = function(args)
-                ffi.fill(finfo.argnull, argc)
-                for i = 0, argc - 1 do
-                    finfo.arg[i], finfo.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
-                end
-            end
-        end
-    end
-    
-    
+        _isok = ffi.new("bool[?]", 1)
+        func = function(...)
+            local args = {...}
+            noop(anchor)
+            macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil, nil)
+            fn_init_args(args, argc, argtypes, finfo)
 
-    
-    _isok = ffi.new("bool[?]", 1)
-    func = function(...)
-        local args = {...}
-        macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil, nil)
-        init_args(args)
+            _isok[0] = true
+            local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
+            if _isok[0] == false then
+                local e = pg_error.get_exception_text()
+                return error("exec[".. (reg_name or funcoid).."] error:"..e)
+            end
+            if finfo.isnull == true then
+                return nil
+            end
+            return to_lua(prorettype)(result)
 
-        --macro has no try catch
-        --local result = macro.FunctionCallInvoke(finfo)
-        _isok[0] = true
-        local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
-        if _isok[0] == false then
-            local e = pg_error.get_exception_text()
-            return error("exec[".. (reg_name or funcoid).."] error:"..e)
         end
-        if finfo.isnull == true then
-            return nil
+    else
+
+        func = function(...)
+
+            local finfo, anchor = FunctionCallInfo_create(argc)
+
+            local fmgrInfo = ffi.new("FmgrInfo[?]", 1)
+            C.fmgr_info_cxt(funcoid, fmgrInfo, C.CurrentMemoryContext);
+            local fn_init_args = init_arguments(fmgrInfo[0].fn_strict == true)
+
+            local args = {...}
+            local result_info = srf_result_info_new()
+
+            macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil
+                , ffi.cast('struct Node *', result_info.rsinfo))
+            fn_init_args(args, argc, argtypes, finfo)
+
+            local _isok = ffi.new("bool[?]", 1)
+            local iter = function()
+                noop(anchor)
+                _isok[0] = true
+                local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
+                if _isok[0] == false then
+                    local e = pg_error.get_exception_text()
+                    return error("exec[".. (reg_name or funcoid).."] error:"..e)
+                end
+                if result_info.rsinfo.isDone == 2 then --ExprEndResult = 2,
+                    return nil
+                end
+                if finfo.isnull == true then
+                    return NULL
+                end
+                return to_lua(prorettype)(result)
+            end
+            return iter
+
         end
-        return to_lua(prorettype)(result)
 
     end
 

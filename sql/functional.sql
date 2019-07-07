@@ -20,7 +20,7 @@ $$ language sql;
 do $$
 local get_json = load_function('pg_temp.get_json()')
 print(get_json())
-print(type(get_json()[1]))
+print(type(get_json()[-1]))
 $$ language pllj;
 
 drop function pg_temp.get_json();
@@ -75,10 +75,14 @@ print(result.first)
 print(result.second)
 $$ language pllj;
 
--- do $$
--- local f = find_function('generate_series(int,int)')
--- for rr in f(2,5) do
--- 	print(rr)
--- end
--- $$ language pllj;
+do $$
+local f = find_function('generate_series(int,int)')
+for rr in f(1,3) do
+
+	for rr in f(41,43) do
+		print(rr)
+	end
+	print(rr)
+end
+$$ language pllj;
 

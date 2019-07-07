@@ -57,7 +57,12 @@ void* uthash_remove(const char* key);
 void uthash_iter(void (*cb_key) (const char *name));
 unsigned uthash_count(void);
 
+typedef struct{
+    ExprContext econtext;
+    ReturnSetInfo rsinfo;
+} pgfunc_srf;
 ]]
+
 
 local null_t, NULL, nullptr
 local null_mt = {
