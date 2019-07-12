@@ -11,6 +11,17 @@ print(nil == nil)
 print(nil == NULL)
 print(NULL == NULL)
 print(NULL == nil)
+local v = NULL
+if v then
+print('if NULL')
+end
+if not v then
+print('if not NULL')
+end
+
+print(NULL == true)
+print(NULL == false)
+print(NULL == 0)
 $$ language pllj;
 INFO:  nil
 INFO:  NULL
@@ -18,6 +29,10 @@ INFO:  true
 INFO:  true
 INFO:  true
 INFO:  true
+INFO:  if NULL
+INFO:  false
+INFO:  false
+INFO:  false
 create table pg_temp.test(txt text);
 do $$
 spi.execute("insert into pg_temp.test(txt) values('qwerty')")

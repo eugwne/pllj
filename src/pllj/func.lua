@@ -25,7 +25,7 @@ local function get_func_from_oid(oid)
 
     local nargs = procst.pronargs;
     local argtypes = procst.proargtypes.values;
-    local rettype = procst.prorettype;
+    local prorettype = procst.prorettype;
     local result_isset = procst.proretset;
     local readonly = (procst.provolatile ~= C.PROVOLATILE_VOLATILE)
 
@@ -34,37 +34,56 @@ local function get_func_from_oid(oid)
     local proname = ffi.string(procst.proname.data) --'anonymous'
 
     if nargs > 0 then
-        local vararg = false
-        local nnames = ffi.new("int[?]", 1)
-        local argnames = C.SysCacheGetAttr(syscache.enum.PROCOID, proc,
-            C.Anum_pg_proc_proargnames, isNull)
-        if isNull[0] == false then
-            local argname = ffi.new 'Datum *[1]'
-            C.deconstruct_array(macro.DatumGetArrayTypeP(argnames), C.TEXTOID, -1, false,
-                string.byte('i'), argname, nil, nnames)
 
-            vararg = (nargs ~= nnames[0])
-            local targ = {}
-            local ttypes = {}
-            if not vararg then
-                for i = 0, nnames[0] - 1 do
-                    local arg = text_to_lua(argname[0][i])
-                    table.insert(targ, arg)
-                    table.insert(ttypes, tonumber(argtypes[i]))
+        local argtypes
+            , argnames
+            , argmodes
+            , argc
 
-                    if #arg == 0 then
-                        vararg = true
-                        break
-                    end
+        argtypes = ffi.new("Oid *[?]", 1)
+        argnames = ffi.new("char **[?]", 1)
+        argmodes = ffi.new("char *[?]", 1)
+        argc = C.get_func_arg_info(proc, argtypes, argnames, argmodes);
+        
+        if argmodes[0] == nil then
+            nargs = argc
+        else
+            nargs = 0
+            for i = 0, argc-1 do
+                if argmodes[0][i] ~= string.byte('o') and argmodes[0][i] ~= string.byte('t')  then 
+                    --PROARGMODE_OUT && PROARGMODE_TABLE
+                    nargs = nargs + 1
                 end
             end
+        end
+        local targ = {}
+        local ttypes = {}
+        local idx = 0
+        --TODO ?
+        local vararg = false
+        for i = 0, argc-1 do
+            if not (argmodes[0] ~= nil and (argmodes[0][i] == string.byte('o') or argmodes[0][i] == string.byte('t')))  then 
+                local arg = ffi.string(argnames[0][idx])
 
-            arguments = '...'
-            if not vararg then
-                arguments = table.concat(targ, ', ')
-                targtypes = ttypes
+                if #arg == 0 then
+                    vararg = true
+                    break
+                end
+
+                local oid = argtypes[0][idx]
+
+                table.insert(targ, arg)
+                table.insert(ttypes, tonumber(oid))
+                idx = idx + 1
             end
         end
+
+        arguments = '...'
+        if not vararg then
+            arguments = table.concat(targ, ', ')
+            targtypes = ttypes
+        end
+
     end
 
     local prosrc = C.SysCacheGetAttr(syscache.enum.PROCOID, proc, C.Anum_pg_proc_prosrc, isNull);
@@ -99,7 +118,7 @@ local function get_func_from_oid(oid)
         tid = tid,
         user_id = user_id,
         result_isset = result_isset,
-        result_type = rettype,
+        prorettype = prorettype,
         argtypes = targtypes,
         oid = oid,
         readonly = readonly,

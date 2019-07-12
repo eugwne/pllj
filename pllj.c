@@ -296,6 +296,11 @@ Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
     SRF_RETURN_NEXT(funcctx, 0);
 }
 
+extern void ljm_ItemPointerSetInvalid(ItemPointerData* pointer);
+extern void ljm_ItemPointerSetInvalid(ItemPointerData* pointer)
+{
+    ItemPointerSetInvalid(pointer);
+}
 
 static void luatable_report(lua_State *L, int elevel)
 {

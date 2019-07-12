@@ -3,7 +3,7 @@ local C = ffi.C
 
 local band = require("bit").band
 local lshift = require("bit").lshift
-
+local rshift = require("bit").rshift
 
 local function GETSTRUCT(TUP)
   local addr = ffi.cast("intptr_t", (TUP).t_data)
@@ -61,15 +61,30 @@ local function HeapTupleHeaderGetXmin(tup)
   return HeapTupleHeaderGetRawXmin(tup)
 end
 
-local function SET_VARSIZE(PTR, len)
-  local varattrib_4b = ffi.cast('varattrib_4b *', PTR)
-  if (C.D_WORDS_BIGENDIAN == 0) then
-    varattrib_4b.va_4byte.va_header = lshift(ffi.cast('uint32', len), 2)
-  else
-    varattrib_4b.va_4byte.va_header = band(len, 0x3FFFFFFF)
-  end
-end
+local VARSIZE
+local SET_VARSIZE
+if (C.D_WORDS_BIGENDIAN == 0) then
 
+    VARSIZE = function (PTR)
+        local varattrib_4b = ffi.cast('varattrib_4b *', PTR)
+        return band(rshift(varattrib_4b.va_4byte.va_header, 2), 0x3FFFFFFF)
+    end
+    SET_VARSIZE = function (PTR, len)
+        local varattrib_4b = ffi.cast('varattrib_4b *', PTR)
+        varattrib_4b.va_4byte.va_header = lshift(ffi.cast('uint32', len), 2)
+    end
+
+else
+
+    VARSIZE = function (PTR)
+        local varattrib_4b = ffi.cast('varattrib_4b *', PTR)
+        return band(varattrib_4b.va_4byte.va_header, 0x3FFFFFFF)
+    end
+    SET_VARSIZE = function (PTR, len)
+        local varattrib_4b = ffi.cast('varattrib_4b *', PTR)
+        varattrib_4b.va_4byte.va_header = band(len, 0x3FFFFFFF)
+    end
+end
 
 local function PointerGetDatum(X) 
     return ffi.cast('Datum', X)
@@ -129,6 +144,18 @@ local function ReleaseTupleDesc(tupdesc)
     end
 end
 
+local function HeapTupleHeaderGetTypeId(tup)
+  return tup.t_choice.t_datum.datum_typeid
+end
+
+local function HeapTupleHeaderGetTypMod(tup)
+  return tup.t_choice.t_datum.datum_typmod
+end
+
+local function HeapTupleHeaderGetDatumLength(tup)
+  return VARSIZE(tup)
+end
+
 local SizeForFunctionCallInfo
 if C.PG_VERSION_NUM >= 120000 then
     SizeForFunctionCallInfo = function (nargs)
@@ -148,6 +175,7 @@ return {
   HeapTupleHeaderGetXmin = HeapTupleHeaderGetXmin,
   GET_2_BYTES = GET_2_BYTES,
   SET_VARSIZE = SET_VARSIZE,
+  VARSIZE = VARSIZE,
   GET_4_BYTES = GET_4_BYTES,
   DatumGetObjectId = DatumGetObjectId,
   CStringGetDatum = CStringGetDatum,
@@ -159,4 +187,7 @@ return {
   get_typlenbyvalalign = get_typlenbyvalalign,
   ReleaseTupleDesc = ReleaseTupleDesc,
   SizeForFunctionCallInfo = SizeForFunctionCallInfo,
+  HeapTupleHeaderGetTypeId = HeapTupleHeaderGetTypeId,
+  HeapTupleHeaderGetTypMod = HeapTupleHeaderGetTypMod,
+  HeapTupleHeaderGetDatumLength = HeapTupleHeaderGetDatumLength,
 }

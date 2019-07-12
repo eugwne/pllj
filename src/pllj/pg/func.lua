@@ -1,8 +1,6 @@
 local ffi = require('ffi')
 local C = ffi.C
 
-local syscache = require('pllj.pg.syscache')
-local macro = require('pllj.pg.macro')
 
 local call_pg_c_variadic
 if C.PG_VERSION_NUM >= 120000 then
