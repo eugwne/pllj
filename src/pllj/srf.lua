@@ -51,11 +51,11 @@ local function srf_handler(func_struct, fcinfo, ctx_result)
         local prev = C.CurrentMemoryContext
         C.CurrentMemoryContext = funcctx.multi_call_memory_ctx
 
-        local iof = to_pg(func_struct.result_type)
+        local iof = to_pg(func_struct.prorettype)
         C.CurrentMemoryContext = prev
 
         if not iof then
-            return error('no conversion for type ' .. tostring(func_struct.result_type))
+            return error('no conversion for type ' .. tostring(func_struct.prorettype))
         end
 
         srf_index = srf_index + 1

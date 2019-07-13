@@ -289,6 +289,7 @@ cdecl_const(INT4OID)
 cdecl_const(INT8OID)
 cdecl_const(TEXTOID)
 cdecl_const(VOIDOID)
+cdecl_const(RECORDOID)
 
 cdecl_const(FLOAT4ARRAYOID)
 #ifndef FLOAT8ARRAYOID
@@ -373,6 +374,8 @@ cdecl_struct(ReturnSetInfo)
 cdecl_type(ReturnSetInfo)
 cdecl_func(RegisterExprContextCallback)
 cdecl_func(UnregisterExprContextCallback)
+cdecl_enum(TypeFuncClass)
+cdecl_func(get_call_result_type)
 
 
 

@@ -9,7 +9,6 @@ local table_new = require('table.new')
 --TODO remake
 local _private = require('pllj.misc').private
 
-local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 local isNull = ffi.new("bool[?]", 1)
 
 local get_rtti = require('pllj.type.rtti').get_rtti

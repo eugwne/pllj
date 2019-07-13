@@ -14,6 +14,17 @@ print(nil == nil)
 print(nil == NULL)
 print(NULL == NULL)
 print(NULL == nil)
+local v = NULL
+if v then
+print('if NULL')
+end
+if not v then
+print('if not NULL')
+end
+
+print(NULL == true)
+print(NULL == false)
+print(NULL == 0)
 $$ language pllj;
 
 

@@ -82,12 +82,27 @@ function pllj.callhandler(ctx)
             return error(err) 
         end
         func_struct = f
+
+        if func_struct.prorettype == C.RECORDOID then
+            local desc = ffi.new('TupleDesc[?]', 1);
+            local result_type = C.get_call_result_type(fcinfo, nil, desc)
+            --TYPEFUNC_COMPOSITE
+            assert(result_type == 1)
+            assert(desc ~= NULL)
+            local prev = C.CurrentMemoryContext
+            C.CurrentMemoryContext = C.TopMemoryContext
+            local tuple_desc = C.CreateTupleDescCopyConstr(desc[0]);
+            C.CurrentMemoryContext = prev
+            C.BlessTupleDesc(tuple_desc);
+
+            func_struct.retrecord_tupdesc = tuple_desc
+        end
         function_cache[fn_oid] = func_struct
     end
 
     local istrigger = C.ljm_CALLED_AS_TRIGGER(fcinfo)
     if istrigger then
-        local status, trg_result = trigger_handler(func_struct, fcinfo) --result_type
+        local status, trg_result = trigger_handler(func_struct, fcinfo) --prorettype
         if status then
             ctx_result[0] = ffi.cast('Datum', trg_result)
             return 
@@ -104,17 +119,26 @@ function pllj.callhandler(ctx)
     spi_opt.readonly = func_struct.readonly
     local result = func_struct.func(unpack(args))
 
-    local iof = to_pg(func_struct.result_type)
+    local iof = to_pg(func_struct.prorettype)
 
     if not iof then
-        return error('no conversion for type ' .. tostring(func_struct.result_type))
+        return error('no conversion for type ' .. tostring(func_struct.prorettype))
     end
     if not result or result == NULL then
         fcinfo.isnull = true
         return 
     end
-
-    ctx_result[0] = ffi.cast('Datum', iof(result))
+    local datum, isnull
+    if func_struct.prorettype == C.RECORDOID then
+        datum, isnull = iof(result, func_struct.retrecord_tupdesc)
+    else
+        datum = iof(result)
+    end
+    if isnull then
+        fcinfo.isnull = true
+        return 
+    end
+    ctx_result[0] = ffi.cast('Datum', datum)
 
     return 
 end

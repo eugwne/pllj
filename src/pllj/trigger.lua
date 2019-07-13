@@ -20,7 +20,14 @@ local trigger_event = {
 
 local tuple_to_lua_table = require('pllj.tuple_ops').tuple_to_lua_table
 local lua_table_to_tuple = require('pllj.tuple_ops').lua_table_to_tuple
-local G_mt = {__index = _G }
+
+local G_mt 
+if __untrusted__ then
+    G_mt = {__index = _G }
+else
+    local env = require('pllj.env').env
+    G_mt = {__index = env }
+end
 
 local private_key = {}
 local private_key_changes = {}
@@ -41,7 +48,7 @@ local function track(t)
 end
 
 local function trigger_handler(func_struct, fcinfo)
-    if func_struct.result_type ~= C.TRIGGEROID then
+    if func_struct.prorettype ~= C.TRIGGEROID then
         return error('wrong trigger function')
     end
     local tdata = ffi.cast('TriggerData*', fcinfo.context)

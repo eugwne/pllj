@@ -8,7 +8,6 @@ local type_map = {}
 
 local isNull = ffi.new("bool[?]", 1)
 
-local get_pg_typeinfo = require('pllj.pg.type_info').get_pg_typeinfo
 local table_new = require('table.new')
 
 local composite_t = require('pllj.type.composite[T]')
@@ -38,6 +37,7 @@ add_io(require('pllj.type.int2array'))
 add_io(require('pllj.type.int4array'))
 add_io(require('pllj.type.int8array'))
 add_io(require('pllj.type.textarray'))
+add_io(require('pllj.type.record'))
 
 
 local function create_converter_tolua(oid)

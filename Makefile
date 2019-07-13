@@ -30,7 +30,8 @@ type_string_conv \
 functional \
 arraytest \
 composite \
-setof
+setof \
+inout
 
 endif
 
@@ -91,5 +92,6 @@ install-module:
 	cp src/pllj/type/int4array.lua $(LUA_DIR)/pllj/type/int4array.lua
 	cp src/pllj/type/int8array.lua $(LUA_DIR)/pllj/type/int8array.lua
 	cp src/pllj/type/textarray.lua $(LUA_DIR)/pllj/type/textarray.lua
+	cp src/pllj/type/record.lua $(LUA_DIR)/pllj/type/record.lua
 	cp src/pllj/type/rtti.lua $(LUA_DIR)/pllj/type/rtti.lua
 

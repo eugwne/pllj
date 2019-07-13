@@ -61,6 +61,9 @@ typedef struct{
     ExprContext econtext;
     ReturnSetInfo rsinfo;
 } pgfunc_srf;
+
+void ljm_ItemPointerSetInvalid(ItemPointerData* pointer);
+
 ]]
 
 
@@ -116,3 +119,4 @@ __pg_print = function(...)
 end
 
 print = __pg_print
+info = print
