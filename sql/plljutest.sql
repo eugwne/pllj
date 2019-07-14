@@ -147,3 +147,18 @@ do $$
       print(unpack(row))
     end
 $$ language pllju;
+
+do $$
+local f = find_function('generate_series(int,int)')
+local f1 = f(5,10)
+print(f1())
+f1 = nil
+local f2 = f(2,2)
+for r in f2 do
+end
+local f3 = f(1,10)
+f3 = nil
+collectgarbage('collect')
+$$ language pllju;
+
+

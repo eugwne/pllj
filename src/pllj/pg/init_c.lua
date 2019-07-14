@@ -66,6 +66,10 @@ void ljm_ItemPointerSetInvalid(ItemPointerData* pointer);
 
 ]]
 
+local function __top_alloc(size)
+    return C.MemoryContextAlloc(C.TopMemoryContext, size)
+end
+
 
 local null_t, NULL, nullptr
 local null_mt = {
@@ -183,6 +187,7 @@ __pg_print = function(...)
     return __pg_print
 end
 
+top_alloc = __top_alloc
 print = __pg_print
 info = __info
 log = __log

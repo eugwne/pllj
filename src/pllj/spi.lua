@@ -122,10 +122,6 @@ ffi.cdef[[
 local SharedPlan_ts = ffi.sizeof('SharedPlan')
 local Oid_ts = ffi.sizeof('Oid')
 
-local function _mc_alloc(size)
-    return C.MemoryContextAlloc(C.TopMemoryContext, size)
-end
-
 local function _shared_destructor(p)
     C.SPI_freeplan(p.plan)
 end
@@ -134,7 +130,7 @@ local int_ptr_t = ffi.typeof('int*')
 local shared_plan_ptr_t = ffi.typeof('SharedPlan*')
 
 local function intrusive_ptr_create(type, size, _dtor)
-    local raw = _mc_alloc(size)
+    local raw = top_alloc(size)
     local iptr = ffi.cast(int_ptr_t, raw)
     iptr[0] = 1
     local gct = ffi.gc(ffi.cast(type, iptr), _dtor)
