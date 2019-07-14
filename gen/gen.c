@@ -376,6 +376,8 @@ cdecl_func(DecrTupleDescRefCount)
 cdecl_func(GetAttributeByNum)
 cdecl_func(HeapTupleHeaderGetDatum)
 
+cdecl_struct(ExprContext_CB)
+cdecl_type(ExprContext_CB)
 cdecl_struct(ExprContext)
 cdecl_type(ExprContext)
 cdecl_struct(FuncCallContext)

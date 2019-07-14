@@ -156,6 +156,19 @@ local function set_memorycontext(m)
     C.CurrentMemoryContext = m
 end
 
+local function gc_check_callback(raw)
+    local finfo = ffi.cast('FunctionCallInfo', raw)
+    local resultinfo = finfo.resultinfo
+    if resultinfo ~= nil then 
+        resultinfo = ffi.cast('ReturnSetInfo*', resultinfo)
+        local ecxt_callback = resultinfo.econtext.ecxt_callbacks
+        if ecxt_callback ~= nil then
+            ecxt_callback['function'](ecxt_callback.arg)
+        end
+    end
+    C.pfree(raw)
+end
+
 local init_arguments
 local FunctionCallInfo_create
 if --[[------------------------------------------------------------]] C.PG_VERSION_NUM >= 120000 then
@@ -178,9 +191,9 @@ if --[[------------------------------------------------------------]] C.PG_VERSI
     end
 
     FunctionCallInfo_create = function(argc)
-        local mem = ffi.new('char[?]', macro.SizeForFunctionCallInfo(argc))
-        local finfo = ffi.cast('FunctionCallInfo', mem)
-        return finfo, mem
+        local raw = top_alloc(macro.SizeForFunctionCallInfo(argc)) --ffi.new('char[?]', macro.SizeForFunctionCallInfo(argc))
+        local finfo = ffi.gc(ffi.cast('FunctionCallInfo', raw), gc_check_callback)
+        return finfo
     end
 
 elseif --[[------------------------------------------------------------]] C.PG_VERSION_NUM < 120000 then
@@ -204,7 +217,9 @@ elseif --[[------------------------------------------------------------]] C.PG_V
     end
 
     FunctionCallInfo_create = function(argc)
-        return ffi.new('struct FunctionCallInfoData'), true
+        local raw = top_alloc(ffi.sizeof('struct FunctionCallInfoData'))
+        local finfo = ffi.gc(ffi.cast('FunctionCallInfo', raw), gc_check_callback)
+        return finfo
     end
 end
 
@@ -226,7 +241,6 @@ local function srf_result_info_new()
     return fcontext
 end
 
-local function noop() end
 local function find_function( value, opt )
     local prev = C.CurrentMemoryContext
     local d = Deferred.create()
@@ -240,7 +254,6 @@ local function find_function( value, opt )
         , argmodes
         , argc
         , finfo
-        , anchor
         , func
         , prorettype
         , fn_init_args
@@ -297,12 +310,12 @@ local function find_function( value, opt )
         fmgrInfo = ffi.new("FmgrInfo[?]", 1)
         C.fmgr_info_cxt(funcoid, fmgrInfo, C.CurrentMemoryContext);
         fn_init_args = init_arguments(fmgrInfo[0].fn_strict == true)
-        finfo, anchor = FunctionCallInfo_create(argc)
+        finfo = FunctionCallInfo_create(argc)
 
         _isok = ffi.new("bool[?]", 1)
         func = function(...)
             local args = {...}
-            noop(anchor)
+
             macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil, nil)
             fn_init_args(args, argc, argtypes, finfo)
 
@@ -322,7 +335,7 @@ local function find_function( value, opt )
 
         func = function(...)
 
-            local finfo, anchor = FunctionCallInfo_create(argc)
+            local finfo = FunctionCallInfo_create(argc)
 
             local fmgrInfo = ffi.new("FmgrInfo[?]", 1)
             C.fmgr_info_cxt(funcoid, fmgrInfo, C.CurrentMemoryContext);
@@ -337,13 +350,14 @@ local function find_function( value, opt )
 
             local _isok = ffi.new("bool[?]", 1)
             local iter = function()
-                noop(anchor)
+
                 _isok[0] = true
                 local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
                 if _isok[0] == false then
                     local e = pg_error.get_exception_text()
                     return error("exec[".. (reg_name or funcoid).."] error:"..e)
                 end
+
                 if result_info.rsinfo.isDone == 2 then --ExprEndResult = 2,
                     return nil
                 end
