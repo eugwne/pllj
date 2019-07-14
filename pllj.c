@@ -27,12 +27,12 @@ PG_MODULE_MAGIC;
 #include <lauxlib.h>
 #include <luajit.h>
 
-#define out(...) ereport(INFO, (errmsg(__VA_ARGS__)))
-#define warning(...) ereport(WARNING, (errmsg(__VA_ARGS__)))
-#define pg_throw(...) ereport(ERROR, (errmsg(__VA_ARGS__)))
+#define out(...) ereport(INFO, (errmsg_internal(__VA_ARGS__)))
+#define warning(...) ereport(WARNING, (errmsg_internal(__VA_ARGS__)))
+#define pg_throw(...) ereport(ERROR, (errmsg_internal(__VA_ARGS__)))
 #define pg_throw_pllj_detail(err) do{\
     ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), \
-    errmsg("[pllj]: error"),\
+    errmsg_internal("[pllj]: error"),\
     errdetail("%s", err)));\
     }while(0)
 
@@ -41,7 +41,7 @@ PG_MODULE_MAGIC;
     const char *err = pstrdup( lua_tostring((L), -1)); \
     lua_pop(L, lua_gettop(L));\
     ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), \
-    errmsg("[pllj]: error"),\
+    errmsg_internal("[pllj]: error"),\
     errdetail("%s", err)));\
     }else {\
     luatable_report(L, ERROR);\
@@ -131,7 +131,7 @@ static int luaP_subt_pcall (lua_State *L) {
     PG_CATCH();{
         ErrorData  *edata;
         edata = CopyErrorData();
-        ereport(FATAL, (errmsg("Unhandled exception: %s", edata->message)));
+        ereport(FATAL, (errmsg_internal("Unhandled exception: %s", edata->message)));
     }
     PG_END_TRY();
     stb_exit(&subtran, status == 0);

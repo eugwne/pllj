@@ -31,7 +31,8 @@ functional \
 arraytest \
 composite \
 setof \
-inout
+inout \
+ereport
 
 endif
 

@@ -42,7 +42,6 @@ end
 
 local function exec(f)
     local status, err, ret = xpcall(f, error_xcall)
-
     if status ~= true then
         if type(err) == "table" then
             if err.detail == nil then

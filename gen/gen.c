@@ -59,7 +59,7 @@ cdecl_type(BlockIdData)
 
 cdecl_func(errstart)
 cdecl_func(errfinish)
-cdecl_func(errmsg)
+cdecl_func(errmsg_internal)
 
 #if PG_VERSION_NUM >= 120000
 cdecl_struct(NullableDatum)
@@ -325,6 +325,16 @@ cdecl_const(WARNING)
 cdecl_const(ERROR)
 cdecl_const(FATAL)
 cdecl_const(PANIC)
+
+cdecl_const(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION)
+cdecl_func(errcode)
+cdecl_func(errdetail_internal)
+cdecl_func(errhint)
+cdecl_func(internalerrquery)
+cdecl_func(internalerrposition)
+cdecl_func(err_generic_string)
+
+
 
 #define SHIFT_ARR_DIMS ARR_DIMS(0)
 cdecl_const(SHIFT_ARR_DIMS)

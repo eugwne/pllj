@@ -81,8 +81,11 @@ local box = {
     spi = spi, 
     NULL = NULL,
     print = print,
-    --TODO
-    info = print,
+
+    info = info,
+    log = log,
+    notice = notice,
+    warning = warning,
     __untrusted__ = __untrusted__, 
 
     assert =  assert,

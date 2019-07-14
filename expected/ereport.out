@@ -1,0 +1,63 @@
+CREATE FUNCTION elog_test() RETURNS void
+AS $$
+info('----')
+log({message = "log txt", detail="detail text"})
+info('----')
+info({detail="detail text"})
+info('----')
+info()
+info('----')
+info({message = "number", detail=12345})
+info('----')
+info({
+    message = "message text",
+    detail = "detail text",
+    hint = "hint text",
+    sqlstate = "XX000",
+    schema_name = "schema_name text",
+    table_name = "table_name text",
+    column_name = "column_name text",
+    datatype_name = "datatype_name text",
+    constraint_name = "constraint_name text"
+})
+info('----')
+notice({message = "notice", detail="detail text"})
+info('----')
+warning({message="warning", detail="detail text"})
+info('----')
+error({message = "error text", detail="detail text", hint="hint text", context = "context text"})
+$$ LANGUAGE pllj;
+SELECT elog_test();
+INFO:  ----
+INFO:  ----
+INFO:  
+DETAIL:  detail text
+INFO:  ----
+INFO:  
+INFO:  ----
+INFO:  number
+DETAIL:  12345
+INFO:  ----
+INFO:  message text
+DETAIL:  detail text
+HINT:  hint text
+INFO:  ----
+NOTICE:  notice
+DETAIL:  detail text
+INFO:  ----
+WARNING:  warning
+DETAIL:  detail text
+INFO:  ----
+ERROR:  error text
+DETAIL:  detail text
+HINT:  hint text
+CONTEXT:  context text
+CREATE FUNCTION elog_test2() RETURNS void
+AS $$
+info('----')
+error("error text 2")
+$$ LANGUAGE pllj;
+SELECT elog_test2();
+INFO:  ----
+ERROR:  [pllj]: error
+DETAIL:  [string "local elog_test2..."]:5: error text 2
