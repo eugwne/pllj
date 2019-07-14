@@ -95,6 +95,71 @@ nullptr = ffi.cast('void*', NULL)
 --NULL = ffi.new("void*")
 ffi.NULL = NULL
 
+local function __report(elevel, data)
+    local elevel = math.min(elevel, C.WARNING)
+    local message 
+    local sqlerrcode
+    local detail
+    local hint
+    local query
+    local position
+    local schema_name
+    local table_name
+    local column_name
+    local datatype_name
+    local constraint_name
+    
+    local t = type(data)
+    if t == "table" then
+        message = data.message and tostring(data.message) or ""
+        sqlerrcode = tonumber(data.sqlerrcode)
+        detail = data.detail
+        hint = data.hint
+        query = data.query
+        position = tonumber(data.position)
+        schema_name = data.schema_name
+        table_name = data.table_name
+        column_name = data.column_name
+        datatype_name = data.datatype_name
+        constraint_name = data.constraint_name
+    elseif type(data) == "string" then
+        message = data
+    else
+        message = data and tostring(data) or ""
+    end 
+
+    C.errstart(elevel, "", 0, nil, nil)
+    C.errfinish(C.errcode(sqlerrcode and sqlerrcode or C.ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+        C.errmsg_internal(message),
+        detail and C.errdetail_internal(tostring(detail)) or 0,
+        --TODO context
+        hint and  C.errhint(tostring(hint)) or 0,
+        query and C.internalerrquery(tostring(query)) or 0,
+        position and C.internalerrposition(position) or 0,
+        schema_name and C.err_generic_string(string.byte('s'), tostring(schema_name)) or 0,--PG_DIAG_SCHEMA_NAME,
+        table_name and C.err_generic_string(string.byte('t'), tostring(table_name)) or 0,--PG_DIAG_TABLE_NAME,
+        column_name and C.err_generic_string(string.byte('c'), tostring(column_name)) or 0,--PG_DIAG_COLUMN_NAME,
+        datatype_name and C.err_generic_string(string.byte('d'), tostring(datatype_name)) or 0,--PG_DIAG_DATATYPE_NAME,
+        constraint_name and C.err_generic_string(string.byte('n'), tostring(constraint_name)) or 0--PG_DIAG_CONSTRAINT_NAME,
+    )
+end 
+
+local function __log(data)
+    __report(C.LOG, data)
+end
+
+local function __info(data)
+    __report(C.INFO, data)
+end
+
+local function __notice(data)
+    __report(C.NOTICE, data)
+end
+
+local function __warning(data)
+    __report(C.WARNING, data)
+end
+
 local __pg_print
 __pg_print = function(...)
     local args = {...}
@@ -103,7 +168,7 @@ __pg_print = function(...)
     if argc < 2 then
         local text = args[1]
         C.errstart(C.INFO, "", 0, nil, nil)
-        C.errfinish(C.errmsg(tostring(text)))
+        C.errfinish(C.errmsg_internal(tostring(text)))
         return __pg_print
     end
     local tmp = table_new(argc * 2, 0)
@@ -114,9 +179,12 @@ __pg_print = function(...)
     end
     local output = table.concat(tmp)
     C.errstart(C.INFO, "", 0, nil, nil)
-    C.errfinish(C.errmsg(tostring(output)))
+    C.errfinish(C.errmsg_internal(tostring(output)))
     return __pg_print
 end
 
 print = __pg_print
-info = print
+info = __info
+log = __log
+notice = __notice
+warning = __warning
