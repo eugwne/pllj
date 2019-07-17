@@ -8,6 +8,7 @@ local to_datum = function(lv)
         if lv == nil or lv == NULL then
             return ffi.cast('Datum', 0), true
         end
+        assert(type(lv) == "string", "type is not string")
         local length = #lv
         local varsize = C.VARHDRSZ + length
         local out_ptr = C.SPI_palloc(varsize)

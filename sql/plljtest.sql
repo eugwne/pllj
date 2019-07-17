@@ -155,7 +155,7 @@ insert into table_1 (column_1) values(15);
 select column_1 from table_1 order by 1;
 
 do $$
-    local plan = spi.prepare("select * from generate_series($1,$2);", "bigint", "bigint")
+    local plan = spi.prepare("select * from generate_series($1,$2);", {"bigint", "bigint"})
     local result = plan:exec(4, 7)
 
     for _, row in ipairs(result) do
@@ -168,7 +168,7 @@ AS 'select $1 + $2;'
 LANGUAGE SQL;
 
 do $$
-    spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('plan pg_temp.add')
+    spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"}):save_as('plan pg_temp.add')
 $$ language pllj;
 
 CREATE or replace FUNCTION pg_temp.test_find_plan() RETURNS void AS $$
@@ -199,7 +199,7 @@ do $$
 $$ language pllj;
 
 do $$
-    local plan = spi.prepare("select $1 as a, $2 as b,  $3 as c", "integer", "integer", "integer")
+    local plan = spi.prepare("select $1 as a, $2 as b,  $3 as c", {"integer", "integer", "integer"})
     local result = plan:exec(4, nil, 7)
 for _, row in ipairs(result) do
 	for _, col in ipairs(row) do
@@ -324,3 +324,84 @@ do $$
 $$ language pllj;
 
 select * from pg_temp.test;
+
+CREATE TABLE sometable ( sid int4, sname text, sdata text);
+INSERT INTO sometable VALUES (1, 'uno', 'data');
+INSERT INTO sometable VALUES (2, 'dos', 'data');
+INSERT INTO sometable VALUES (3, 'tres', 'data');
+INSERT INTO sometable VALUES (4, 'quatro', 'data');
+INSERT INTO sometable VALUES (5, 'cinco', 'data');
+
+do $$
+    local cursor = spi.cursor("select * from sometable")
+    cursor:close()
+    local _, e = pcall(cursor.close, cursor)
+    print(string.find(e, "cursor deleted")~=nil)
+$$ language pllj;
+
+do $$
+    local function print_result(result)
+        print('__________')
+        for _, row in ipairs(result) do
+            print('|', unpack(row))
+        end
+        print('----------')
+    end
+    local cursor = spi.cursor("select * from sometable")
+    print_result(cursor:fetch())
+    print_result(cursor:fetch())
+    print_result(cursor:fetch(-2))
+    cursor = nil
+    cursor = spi.cursor("select * from sometable")
+
+    print_result(cursor:fetch(4))
+    print_result(cursor:fetch(-2))
+    print('move')
+    cursor:move(1, 'a')
+    print_result(cursor:fetch(1))
+    cursor:move(1)
+    print_result(cursor:fetch(1))
+    cursor:move(10)
+    print_result(cursor:fetch(1))
+    cursor:move(2, 'b')
+    print_result(cursor:fetch(1))
+    cursor:move(-2)
+    print_result(cursor:fetch(1))
+    cursor:close()
+
+$$ language pllj;
+
+
+do $$
+    local function print_result(result)
+        print('__________')
+        for _, row in ipairs(result) do
+            print('|', unpack(row))
+        end
+        print('----------')
+    end
+    local plan = spi.prepare("select * from sometable where sid > $1 ;", {"integer"}):save_as("cursor test")
+    local cursor = plan:cursor(1)
+    local cursor3 = plan:cursor(3)
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+$$ language pllj;
+
+BEGIN;
+do $$
+    local cursor = spi.named_cursor("del","select * from sometable")
+$$ language pllj;
+
+do $$
+    local c = spi.find_cursor("del")
+    print(#c:fetch(10))
+    print(c)
+$$ language pllj;
+ROLLBACK;
+
+do $$
+    local _, e = spi.find_cursor("del")
+    print(string.find(e, "cursor not found")~=nil)
+$$ language pllj;
