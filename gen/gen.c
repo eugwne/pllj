@@ -31,6 +31,8 @@
 #include <parser/parse_type.h>
 #include <funcapi.h>
 #include <utils/typcache.h>
+#include <utils/portal.h>
+#include <nodes/parsenodes.h>
 
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
@@ -60,6 +62,7 @@ cdecl_type(BlockIdData)
 cdecl_func(errstart)
 cdecl_func(errfinish)
 cdecl_func(errmsg_internal)
+
 
 #if PG_VERSION_NUM >= 120000
 cdecl_struct(NullableDatum)
@@ -389,6 +392,23 @@ cdecl_func(UnregisterExprContextCallback)
 cdecl_enum(TypeFuncClass)
 cdecl_func(get_call_result_type)
 
+cdecl_type(Portal)
+cdecl_enum(PortalStrategy)
+cdecl_enum(PortalStatus)
+cdecl_struct(PortalData)
 
+
+cdecl_func(GetPortalByName)
+//cdecl_func(SPI_cursor_open)
+cdecl_func(SPI_cursor_close)
+
+
+
+cdecl_struct(MemoryContextCallback)
+cdecl_type(MemoryContextCallback)
+cdecl_func(MemoryContextRegisterResetCallback)
+cdecl_enum(FetchDirection)
+
+cdecl_func(MemoryContextStrdup)
 
 cdecl_const(PG_VERSION_NUM)

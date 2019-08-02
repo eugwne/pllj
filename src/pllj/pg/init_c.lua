@@ -5,7 +5,8 @@ local table_new = require('table.new')
 
 ffi.cdef[[
 const char *
-GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged)
+GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged);
+struct PortalData;
 ]]
 local api_version = ffi.string(C.GetConfigOption('server_version_num', true, false))
 
@@ -57,6 +58,10 @@ void* uthash_remove(const char* key);
 void uthash_iter(void (*cb_key) (const char *name));
 unsigned uthash_count(void);
 
+bool uthash_portal_add(const char* key, void* value);
+void* uthash_portal_find(const char* key);
+void* uthash_portal_remove(const char* key);
+
 typedef struct{
     ExprContext econtext;
     ReturnSetInfo rsinfo;
@@ -64,6 +69,16 @@ typedef struct{
 
 void ljm_ItemPointerSetInvalid(ItemPointerData* pointer);
 
+Portal
+ljm_SPI_cursor_open_with_args(const char *name,
+                            const char *src,
+                            int nargs, Oid *argtypes,
+                            Datum *Values, const char *Nulls,
+                            bool read_only, int cursorOptions);
+
+void ljm_SPI_scroll_cursor_fetch(Portal portal, enum FetchDirection direction, long count);
+void ljm_SPI_scroll_cursor_move(Portal portal, enum FetchDirection direction, long count);
+Portal ljm_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only);
 ]]
 
 local function __top_alloc(size)

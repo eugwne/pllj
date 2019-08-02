@@ -53,7 +53,7 @@ AS 'select $1 + $2;'
 LANGUAGE SQL;
 
 do $$
-    local plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('del')
+    local plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"}):save_as('del')
     intptr_counter = ffi.cast("int*", plan[1])
     collectgarbage('collect')
     print('ref_count ' .. intptr_counter[0])
@@ -65,7 +65,7 @@ $$ language pllju;
 
 do $$
     collectgarbage('stop')
-    local plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer"):save_as('plan pg_temp.add')
+    local plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"}):save_as('plan pg_temp.add')
     intptr_counter = ffi.cast("int*", plan[1])
 $$ language pllju;
 
@@ -119,7 +119,7 @@ do $$
 $$ language pllju;
 
 do $$
-    local plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer")
+    local plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"})
     intptr_counter = ffi.cast("int*", plan[1])
     print('ref_count ' .. intptr_counter[0])
     local p2 = plan:save_as('del2')
@@ -137,7 +137,7 @@ do $$
 $$ language pllju;
 
 do $$
-    g_plan = spi.prepare("select * from pg_temp.add($1,$2);", "integer", "integer")
+    g_plan = spi.prepare("select * from pg_temp.add($1,$2);", {"integer", "integer"})
 $$ language pllju;
 
 do $$
@@ -161,4 +161,198 @@ f3 = nil
 collectgarbage('collect')
 $$ language pllju;
 
+CREATE TABLE sometable ( sid int4, sname text, sdata text);
+INSERT INTO sometable VALUES (1, 'uno', 'data');
+INSERT INTO sometable VALUES (2, 'dos', 'data');
+INSERT INTO sometable VALUES (3, 'tres', 'data');
+INSERT INTO sometable VALUES (4, 'quatro', 'data');
+INSERT INTO sometable VALUES (5, 'cinco', 'data');
 
+BEGIN;
+do $$
+    cursor = spi.cursor("select * from sometable")
+$$ language pllju;
+ROLLBACK;
+
+do $$
+    local _, e = pcall(cursor.close, cursor)
+    print(string.find(e, "cursor deleted")~=nil)
+$$ language pllju;
+
+
+
+BEGIN;
+do $$
+    cursor = spi.cursor("select * from sometable")
+$$ language pllju;
+
+do $$
+    cursor:close()
+$$ language pllju;
+
+ROLLBACK;
+
+do $$
+    cursor = spi.cursor("select * from sometable")
+    cursor:close()
+    local _, e = pcall(cursor.close, cursor)
+    print(string.find(e, "cursor deleted")~=nil)
+$$ language pllju;
+
+do $$
+    function print_result(result)
+        print('__________')
+        for _, row in ipairs(result) do
+            print('|', unpack(row))
+        end
+        print('----------')
+    end
+    local cursor = spi.cursor("select * from sometable")
+    print_result(cursor:fetch())
+    print_result(cursor:fetch())
+    print_result(cursor:fetch(-2))
+    cursor = nil
+    collectgarbage('collect')
+    cursor = spi.cursor("select * from sometable")
+
+    print_result(cursor:fetch(4))
+    print_result(cursor:fetch(-2))
+    print('move')
+    cursor:move(1, 'a')
+    print_result(cursor:fetch(1))
+    cursor:move(1)
+    print_result(cursor:fetch(1))
+    cursor:move(10)
+    print_result(cursor:fetch(1))
+    cursor:move(2, 'b')
+    print_result(cursor:fetch(1))
+    cursor:move(-2)
+    print_result(cursor:fetch(1))
+    cursor:close()
+
+$$ language pllju;
+
+BEGIN;
+do $$
+    plan = spi.prepare("select * from sometable where sid > $1 ;", {"integer"})
+    cursor = plan:cursor(1)
+    cursor3 = plan:cursor(3)
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+$$ language pllju;
+
+do $$
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+$$ language pllju;
+ROLLBACK;
+
+do $$
+    cursor = plan:cursor(1)
+    cursor3 = plan:cursor(3)
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+    print_result(cursor:fetch(1))
+    print_result(cursor3:fetch(1))
+$$ language pllju;
+
+do $$
+    local _, e = pcall(cursor.close, cursor)
+    print(string.find(e, "cursor deleted")~=nil)
+    _, e = pcall(cursor.close, cursor3)
+    print(string.find(e, "cursor deleted")~=nil)
+$$ language pllju;
+
+
+do $$
+    local m = 0
+    for r in spi.rows('select generate_series(1,500000)') do
+        assert(r[1] - m == 1)
+        m = math.max(r[1], m)
+    end
+    print(m)
+$$ language pllju;
+
+
+do $$
+    local plan = spi.prepare("select generate_series($1,$2)", {"int", "int"})
+    local m = 0
+    for i in plan:rows(1,3) do
+        for k in plan:rows(4,6) do
+            for l in plan:rows(7,9) do
+                print(i[1], k[1], l[1])
+            end
+        end
+    end
+
+$$ language pllju;
+
+
+do $$
+    local cursor = plan:named_cursor("cursor_name", 1)
+    local _, e = pcall(plan.named_cursor, plan, "cursor_name", 3)
+    print(string.find(e, 'cursor "cursor_name" already exists')~=nil)
+    cursor = nil
+    collectgarbage("collect")
+    collectgarbage("collect")
+$$ language pllju;
+
+
+BEGIN;
+do $$
+    plan = spi.prepare("select * from sometable where sid > $1 ;", {"integer"})
+    plan:named_cursor("cursor 4", 4)
+$$ language pllju;
+
+do $$
+    local c = spi.find_cursor("cursor 4")
+    print(c)
+    print_result(c:fetch(10))
+$$ language pllju;
+ROLLBACK;
+
+do $$
+    local _, e = spi.find_cursor("cursor 4")
+    print(string.find(e, "cursor not found")~=nil)
+$$ language pllju;
+
+CREATE or replace FUNCTION pg_temp.get_temp_cursor() RETURNS text AS $$
+    plan = spi.prepare("select * from sometable where sid > $1 ;", {"integer"})
+    plan:named_cursor("get_temp_cursor", 2)
+    return "get_temp_cursor"
+$$ LANGUAGE pllju;
+
+do $$
+    local curname = spi.execute("select pg_temp.get_temp_cursor()")[1][1]
+    local c = spi.find_cursor(curname)
+    print(c)
+    print_result(c:fetch(10))
+$$ language pllju;
+
+do $$
+    local curname = spi.execute("select pg_temp.get_temp_cursor()")[1][1]
+    collectgarbage('collect')
+    local c = spi.find_cursor(curname)
+    print(c)
+    print_result(c:fetch(10))
+$$ language pllju;
+
+BEGIN;
+do $$
+    plan = spi.prepare("select * from sometable where sid > $1 ;", {"integer"})
+    del = plan:named_cursor("del", 4)
+$$ language pllju;
+ROLLBACK;
+
+do $$
+    local _, e = pcall(del.fetch, del, 1)
+    print(string.find(e, "cursor deleted")~=nil)
+    _, e = pcall(del.move, del, 1)
+    print(string.find(e, "cursor deleted")~=nil)
+    _, e = pcall(del.close, del)
+    print(string.find(e, "cursor deleted")~=nil)
+    _, e = spi.find_cursor("del")
+    print(string.find(e, "cursor not found")~=nil)
+$$ language pllju;

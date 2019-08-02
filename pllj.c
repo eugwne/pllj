@@ -248,6 +248,25 @@ SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int 
     return 0;
 }
 
+extern Portal
+ljm_SPI_cursor_open_with_args(const char *name,
+                            const char *src,
+                            int nargs, Oid *argtypes,
+                            Datum *Values, const char *Nulls,
+                            bool read_only, int cursorOptions);
+Portal
+ljm_SPI_cursor_open_with_args(const char *name,
+                            const char *src,
+                            int nargs, Oid *argtypes,
+                            Datum *Values, const char *Nulls,
+                            bool read_only, int cursorOptions)
+{
+    LJ_BEGIN_PG_TRY()
+        return SPI_cursor_open_with_args(name, src, nargs, argtypes, Values, Nulls, read_only, cursorOptions);
+    LJ_END_PG_TRY()
+    return 0;
+}
+
 extern ArrayType *
 lj_construct_md_array(Datum *elems,
                     bool *nulls,
@@ -302,6 +321,34 @@ extern void ljm_ItemPointerSetInvalid(ItemPointerData* pointer)
     ItemPointerSetInvalid(pointer);
 }
 
+extern void ljm_SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count);
+void ljm_SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
+{
+
+    LJ_BEGIN_PG_TRY()
+       SPI_scroll_cursor_fetch(portal, direction, count);
+    LJ_END_PG_TRY( {SPI_restore_connection();})
+}
+
+extern void ljm_SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count);
+void ljm_SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count)
+{
+
+    LJ_BEGIN_PG_TRY()
+       SPI_scroll_cursor_move(portal, direction, count);
+    LJ_END_PG_TRY( {SPI_restore_connection();})
+}
+
+extern Portal ljm_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only);
+Portal ljm_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only)
+{
+    LJ_BEGIN_PG_TRY()
+       return SPI_cursor_open(name, plan, Values, Nulls, read_only);
+    LJ_END_PG_TRY( {SPI_restore_connection();})
+    return 0;
+}
+
+
 static void luatable_report(lua_State *L, int elevel)
 {
     ErrorData	edata;
@@ -333,7 +380,42 @@ typedef struct shared_data_struct_t {
     UT_hash_handle hh; /* makes this structure hashable */
 } shared_data_struct_t;
 
-static shared_data_struct_t *shared_data = NULL;
+static shared_data_struct_t *shared_plan = NULL;
+static shared_data_struct_t *shared_portal = NULL;
+
+#define __UTHASH_add(htable, key, value) \
+do { \
+    shared_data_struct_t *s, *tmp; \
+    HASH_FIND_STR(htable, key, tmp); \
+    if (tmp) return false; \
+    s = (shared_data_struct_t *)MemoryContextAlloc(TopMemoryContext, sizeof(shared_data_struct_t)); \
+    s->key = MemoryContextStrdup(TopMemoryContext, key); \
+    s->value = value; \
+    HASH_ADD_KEYPTR(hh, htable, s->key, strlen(s->key), s); \
+    return true; \
+} while (0)
+
+#define __UTHASH_find(htable, key) \
+do { \
+    shared_data_struct_t *s; \
+    HASH_FIND_STR(htable, key, s); \
+    if (!s) return NULL; \
+    return s->value; \
+} while (0)
+
+//caller should free value
+#define  __UTHASH_remove(htable, key) \
+do { \
+    shared_data_struct_t *entry = NULL; \
+    void* value = NULL; \
+    HASH_FIND_STR(htable, key, entry); \
+    if (!entry) return NULL; \
+    HASH_DELETE(hh, htable, entry); \
+    pfree((void*)entry->key); \
+    value = entry->value; \
+    pfree((void*)entry); \
+    return value; \
+} while (0) 
 
 static int call_ref = 0;
 static int inline_ref = 0;
@@ -344,53 +426,52 @@ volatile int call_depth = 0;
 extern bool uthash_add(const char* key, void* value);
 bool uthash_add(const char* key, void* value)
 {
-    shared_data_struct_t *s, *tmp;
-    HASH_FIND_STR(shared_data, key, tmp);
-    if (tmp) return false;
-
-    s = (shared_data_struct_t *)MemoryContextAlloc(TopMemoryContext, sizeof(shared_data_struct_t));
-    s->key = MemoryContextStrdup(TopMemoryContext, key);
-    s->value = value;
-
-    HASH_ADD_KEYPTR(hh, shared_data, s->key, strlen(s->key), s);
-    return true;
+    __UTHASH_add(shared_plan, key, value);
 }
 
 extern void* uthash_find(const char* key);
 void* uthash_find(const char* key)
 {
-    shared_data_struct_t *s;
-    HASH_FIND_STR(shared_data, key, s);
-    if (!s) return NULL;
-    return s->value;
+    __UTHASH_find(shared_plan, key);
 }
 
 extern void* uthash_remove(const char* key);
 void* uthash_remove(const char* key)
 {
-    shared_data_struct_t *entry = NULL;
-    void* value = NULL;
-    HASH_FIND_STR(shared_data, key, entry);
-    if (!entry) return NULL;
-    HASH_DELETE(hh, shared_data, entry);
-    pfree((void*)entry->key);
-    value = entry->value;
-    pfree((void*)entry);
-    //caller should free it
-    return value;
+    __UTHASH_remove(shared_plan, key);
 }
+
+
+extern bool uthash_portal_add(const char* key, void* value);
+bool uthash_portal_add(const char* key, void* value)
+{
+    __UTHASH_add(shared_portal, key, value);
+}
+
+extern void* uthash_portal_find(const char* key);
+void* uthash_portal_find(const char* key)
+{
+    __UTHASH_find(shared_portal, key);
+}
+
+extern void* uthash_portal_remove(const char* key);
+void* uthash_portal_remove(const char* key)
+{
+    __UTHASH_remove(shared_portal, key);
+}
+
 
 extern unsigned uthash_count(void);
 unsigned uthash_count(void)
 {
-    return HASH_COUNT(shared_data);
+    return HASH_COUNT(shared_plan);
 }
 
 extern void uthash_iter(void (*cb_key) (const char *name));
 void uthash_iter(void (*cb_key) (const char *name))
 {
     shared_data_struct_t *s, *tmp;
-    HASH_ITER(hh, shared_data, s, tmp) {
+    HASH_ITER(hh, shared_plan, s, tmp) {
         cb_key(s->key);
     }
 }
