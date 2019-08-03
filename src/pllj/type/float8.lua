@@ -6,14 +6,14 @@ return {
     oid = C.FLOAT8OID,
 
     to_lua = function(datum)
-        return tonumber(C.ljm_DatumGetFloat8(datum))
+        return tonumber(imported.DatumGetFloat8(datum))
     end,
 
     to_datum = function(lv)
         if (lv == NULL) then
             return ffi.cast('Datum', 0), true
         end
-        return C.ljm_Float8GetDatum(ffi.cast('float8',tonumber(lv))), false
+        return imported.Float8GetDatum(ffi.cast('float8',tonumber(lv))), false
     end,
 
 }

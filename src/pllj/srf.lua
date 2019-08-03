@@ -15,21 +15,11 @@ local function SRF_IS_FIRSTCALL(fcinfo)
     return fcinfo.flinfo.fn_extra == nil
 end
 
-local function SRF_FIRSTCALL_INIT(fcinfo)
-    return C.ljm_SRF_FIRSTCALL_INIT(fcinfo);
-end
+local SRF_FIRSTCALL_INIT = imported.SRF_FIRSTCALL_INIT
+local SRF_PERCALL_SETUP = imported.SRF_PERCALL_SETUP
+local SRF_RETURN_DONE = imported.SRF_RETURN_DONE
+local SRF_RETURN_NEXT = imported.SRF_RETURN_NEXT
 
-local function SRF_PERCALL_SETUP(fcinfo)
-    return C.ljm_SRF_PERCALL_SETUP(fcinfo);
-end
-
-local function SRF_RETURN_DONE(fcinfo, funcctx)
-    return C.ljm_SRF_RETURN_DONE(fcinfo, funcctx);
-end
-
-local function SRF_RETURN_NEXT(fcinfo, funcctx)
-    return C.ljm_SRF_RETURN_NEXT(fcinfo, funcctx);
-end
 
 local cb_expr_context = function(datum)
     local coindex = tonumber(ffi.cast('int64_t', datum))

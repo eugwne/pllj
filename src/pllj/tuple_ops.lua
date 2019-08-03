@@ -18,7 +18,7 @@ local function tuple_to_lua_1array(tupleDesc, tuple)
     for k = 0, natts-1 do
         local attr = tupleDesc.attrs[k]
 
-        local val = C.pllj_heap_getattr(tuple, attr.attnum, tupleDesc,  isNull)
+        local val = imported.heap_getattr(tuple, attr.attnum, tupleDesc,  isNull)
         local not_null = isNull[0] == false
         if not_null then
             row[k+1] = to_lua(attr.atttypid)(val)
@@ -41,7 +41,7 @@ local function tuple_to_lua_table(tupleDesc, tuple)
 
         local columnName =  (ffi.string(ffi.cast('const char *', attr.attname)))
 
-        local value = C.pllj_heap_getattr(tuple, attr.attnum, tupleDesc,  isNull)
+        local value = imported.heap_getattr(tuple, attr.attnum, tupleDesc,  isNull)
         local not_null = isNull[0] == false
         if not_null then
             row[columnName] = to_lua(attr.atttypid)(value)

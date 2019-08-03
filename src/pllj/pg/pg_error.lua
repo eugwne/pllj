@@ -2,12 +2,11 @@ local ffi = require('ffi')
 
 local C = ffi.C
 
-ffi.cdef[[ErrorData  *last_edata;]]
-
+local ref_error = imported.last_e
 
 local function get_exception_text()
-  local message = C.last_edata.message == nil and "" or ffi.string(C.last_edata.message)
-  local detail = C.last_edata.detail == nil and "" or ffi.string(C.last_edata.detail)
+  local message = ref_error.data.message == nil and "" or ffi.string(ref_error.data.message)
+  local detail = ref_error.data.detail == nil and "" or ffi.string(ref_error.data.detail)
   --TODO: C.FreeErrorData(C.last_edata) ?
   
   return message.."\n\t"..detail
@@ -15,10 +14,10 @@ end
 
 
 local function throw_last_error(text)
-    if C.last_edata == nil then return end 
+    if ref_error.data == nil then return end 
     text = (text or "") .. get_exception_text()
-    C.FreeErrorData(C.last_edata)
-    C.last_edata = nil
+    C.FreeErrorData(ref_error.data)
+    ref_error.data = nil
     return error(text)
 end
 

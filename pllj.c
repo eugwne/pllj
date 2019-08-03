@@ -147,31 +147,30 @@ static const luaL_Reg luaP_funcs[] = {
     {NULL, NULL}
 };
 
-extern ErrorData  *last_edata;
-ErrorData  *last_edata = NULL;
+static ErrorData  *last_edata = NULL;
 
-extern bool ljm_CALLED_AS_TRIGGER (void* fcinfo);
-bool ljm_CALLED_AS_TRIGGER (void* fcinfo) {
+static Datum e_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull){
+    Datum value = heap_getattr(tuple, attnum, tupleDesc, isnull);
+    return value;
+}
+
+static bool e_CALLED_AS_TRIGGER (void* fcinfo) {
     return CALLED_AS_TRIGGER((FunctionCallInfo)fcinfo);
 }
 
-extern float4 ljm_DatumGetFloat4(Datum X);
-float4 ljm_DatumGetFloat4(Datum X){
+static float4 e_DatumGetFloat4(Datum X){
     return DatumGetFloat4(X);
 }
 
-extern Datum ljm_Float4GetDatum(float4 X);
-Datum ljm_Float4GetDatum(float4 X) {
+static Datum e_Float4GetDatum(float4 X) {
     return Float4GetDatum(X);
 }
 
-extern float8 ljm_DatumGetFloat8(Datum X);
-float8 ljm_DatumGetFloat8(Datum X){
+static float8 e_DatumGetFloat8(Datum X){
     return DatumGetFloat8(X);
 }
 
-extern Datum ljm_Float8GetDatum(float8 X);
-Datum ljm_Float8GetDatum(float8 X) {
+static Datum e_Float8GetDatum(float8 X) {
     return Float8GetDatum(X);
 }
 
@@ -187,24 +186,21 @@ Datum ljm_Float8GetDatum(float8 X) {
         code \
     } PG_END_TRY();
 
-extern Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
-Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod){
+static Datum e_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod){
     LJ_BEGIN_PG_TRY()
         return InputFunctionCall(flinfo, str, typioparam, typmod);
     LJ_END_PG_TRY()
     return 0;
 }
 
-extern Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
-Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
+static Datum e_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
     LJ_BEGIN_PG_TRY()
         return FunctionCallInvoke(fcinfo);
     LJ_END_PG_TRY( {*isok = false;})
     return 0;
 }
 
-extern Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
-Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
+static Datum e_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
 #if PG_VERSION_NUM < 100000
     Datum result;
     SPI_push();
@@ -215,12 +211,11 @@ Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
     LJ_END_PG_TRY( {SPI_pop();*isok = false;})
     return 0;
 #else
-    return lj_FunctionCallInvoke(fcinfo, isok);
+    return e_FunctionCallInvoke(fcinfo, isok);
 #endif
 }
 
-extern int lj_SPI_execute(const char *src, bool read_only, long tcount);
-int lj_SPI_execute(const char *src, bool read_only, long tcount) {
+static int e_SPI_execute(const char *src, bool read_only, long tcount) {
     int result = 0;
     LJ_BEGIN_PG_TRY()
         result = SPI_execute(src, read_only, tcount);
@@ -229,9 +224,7 @@ int lj_SPI_execute(const char *src, bool read_only, long tcount) {
     return result;
 }
 
-extern int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
-                     bool read_only, long count);
-int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
+static int e_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
                      bool read_only, long count) {
     int result = 0;
     LJ_BEGIN_PG_TRY()
@@ -240,22 +233,15 @@ int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls,
     return result;
 }
 
-extern SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
-SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions){
+static SPIPlanPtr e_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions){
     LJ_BEGIN_PG_TRY()
         return SPI_prepare_cursor(src, nargs, argtypes, cursorOptions);
     LJ_END_PG_TRY()
     return 0;
 }
 
-extern Portal
-ljm_SPI_cursor_open_with_args(const char *name,
-                            const char *src,
-                            int nargs, Oid *argtypes,
-                            Datum *Values, const char *Nulls,
-                            bool read_only, int cursorOptions);
-Portal
-ljm_SPI_cursor_open_with_args(const char *name,
+static Portal
+e_SPI_cursor_open_with_args(const char *name,
                             const char *src,
                             int nargs, Oid *argtypes,
                             Datum *Values, const char *Nulls,
@@ -267,15 +253,8 @@ ljm_SPI_cursor_open_with_args(const char *name,
     return 0;
 }
 
-extern ArrayType *
-lj_construct_md_array(Datum *elems,
-                    bool *nulls,
-                    int ndims,
-                    int *dims,
-                    int *lbs,
-                    Oid elmtype, int elmlen, bool elmbyval, char elmalign);
-ArrayType *
-lj_construct_md_array(Datum *elems,
+static ArrayType *
+e_construct_md_array(Datum *elems,
                     bool *nulls,
                     int ndims,
                     int *dims,
@@ -288,8 +267,7 @@ lj_construct_md_array(Datum *elems,
 }
 
 
-extern FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo);
-FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo)
+static FuncCallContext *e_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo)
 {
     LJ_BEGIN_PG_TRY()
         return SRF_FIRSTCALL_INIT();
@@ -297,32 +275,27 @@ FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo)
     return 0;
 }
 
-extern FuncCallContext *ljm_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo);
-FuncCallContext *ljm_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo)
+static FuncCallContext *e_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo)
 {
     return SRF_PERCALL_SETUP();
 }
 
-extern Datum ljm_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
-Datum ljm_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
+static Datum e_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
 {
     SRF_RETURN_DONE(funcctx);
 }
 
-extern Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
-Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
+static Datum e_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx)
 {
     SRF_RETURN_NEXT(funcctx, 0);
 }
 
-extern void ljm_ItemPointerSetInvalid(ItemPointerData* pointer);
-extern void ljm_ItemPointerSetInvalid(ItemPointerData* pointer)
+static void e_ItemPointerSetInvalid(ItemPointerData* pointer)
 {
     ItemPointerSetInvalid(pointer);
 }
 
-extern void ljm_SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count);
-void ljm_SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
+static void e_SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
 {
 
     LJ_BEGIN_PG_TRY()
@@ -330,8 +303,7 @@ void ljm_SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long c
     LJ_END_PG_TRY( {SPI_restore_connection();})
 }
 
-extern void ljm_SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count);
-void ljm_SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count)
+static void e_SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count)
 {
 
     LJ_BEGIN_PG_TRY()
@@ -339,8 +311,7 @@ void ljm_SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long co
     LJ_END_PG_TRY( {SPI_restore_connection();})
 }
 
-extern Portal ljm_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only);
-Portal ljm_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only)
+static Portal e_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only)
 {
     LJ_BEGIN_PG_TRY()
        return SPI_cursor_open(name, plan, Values, Nulls, read_only);
@@ -420,55 +391,46 @@ do { \
 static int call_ref = 0;
 static int inline_ref = 0;
 static int validator_ref = 0;
-extern volatile int call_depth;
-volatile int call_depth = 0;
+static volatile int call_depth = 0;
 
-extern bool uthash_add(const char* key, void* value);
-bool uthash_add(const char* key, void* value)
+static bool uthash_add(const char* key, void* value)
 {
     __UTHASH_add(shared_plan, key, value);
 }
 
-extern void* uthash_find(const char* key);
-void* uthash_find(const char* key)
+static void* uthash_find(const char* key)
 {
     __UTHASH_find(shared_plan, key);
 }
 
-extern void* uthash_remove(const char* key);
-void* uthash_remove(const char* key)
+static void* uthash_remove(const char* key)
 {
     __UTHASH_remove(shared_plan, key);
 }
 
 
-extern bool uthash_portal_add(const char* key, void* value);
-bool uthash_portal_add(const char* key, void* value)
+static bool uthash_portal_add(const char* key, void* value)
 {
     __UTHASH_add(shared_portal, key, value);
 }
 
-extern void* uthash_portal_find(const char* key);
-void* uthash_portal_find(const char* key)
+static void* uthash_portal_find(const char* key)
 {
     __UTHASH_find(shared_portal, key);
 }
 
-extern void* uthash_portal_remove(const char* key);
-void* uthash_portal_remove(const char* key)
+static void* uthash_portal_remove(const char* key)
 {
     __UTHASH_remove(shared_portal, key);
 }
 
 
-extern unsigned uthash_count(void);
-unsigned uthash_count(void)
+static unsigned uthash_count(void)
 {
     return HASH_COUNT(shared_plan);
 }
 
-extern void uthash_iter(void (*cb_key) (const char *name));
-void uthash_iter(void (*cb_key) (const char *name))
+static void uthash_iter(void (*cb_key) (const char *name))
 {
     shared_data_struct_t *s, *tmp;
     HASH_ITER(hh, shared_plan, s, tmp) {
@@ -476,9 +438,57 @@ void uthash_iter(void (*cb_key) (const char *name))
     }
 }
 
+static struct {
+  const char *name;
+  void *ptr;
+  const char *tname;
+} exp_data[] = {
+    {"SPI_cursor_open_with_args", e_SPI_cursor_open_with_args, "Portal (*)(const char *, const char *, int, Oid *, Datum *, const char *, bool, int)"},
+    {"SPI_cursor_open", e_SPI_cursor_open, "Portal(*)(const char *, SPIPlanPtr, Datum *, const char *, bool)"},
+    {"SPI_scroll_cursor_move", e_SPI_scroll_cursor_move, "void(*) (Portal, enum FetchDirection, long)"},
+    {"SPI_scroll_cursor_fetch", e_SPI_scroll_cursor_fetch, "void(*) (Portal, enum FetchDirection, long)"},
+    {"ItemPointerSetInvalid", e_ItemPointerSetInvalid, "void(*) (ItemPointerData*)"},
+
+    {"uthash_add", uthash_add, "bool (*) (const char*, void*)"},
+    {"uthash_find", uthash_find, "void* (*) (const char*)"},
+    {"uthash_remove", uthash_remove, "void* (*) (const char*)"},
+    {"uthash_iter", uthash_iter, "void (*)(void (*cb_key) (const char *))"},
+    {"uthash_count", uthash_count, "unsigned (*) ()"},
+    
+    {"uthash_portal_add", uthash_portal_add, "bool (*) (const char*, void*)"},
+    {"uthash_portal_find", uthash_portal_find, "void* (*) (const char*)"},
+    {"uthash_portal_remove", uthash_portal_remove, "void* (*) (const char*)"},
+
+    {"SRF_FIRSTCALL_INIT", e_SRF_FIRSTCALL_INIT, "FuncCallContext* (*) (FunctionCallInfo)"},
+    {"SRF_PERCALL_SETUP", e_SRF_PERCALL_SETUP, "FuncCallContext* (*) (FunctionCallInfo)"},
+    {"SRF_RETURN_DONE", e_SRF_RETURN_DONE, "Datum (*) (FunctionCallInfo, FuncCallContext*)"},
+    {"SRF_RETURN_NEXT", e_SRF_RETURN_NEXT, "Datum (*) (FunctionCallInfo, FuncCallContext*)"},
+
+    {"CALLED_AS_TRIGGER", e_CALLED_AS_TRIGGER, "bool (*) (void*)"},
+    {"DatumGetFloat4", e_DatumGetFloat4, "float4 (*) (Datum)"},
+    {"Float4GetDatum", e_Float4GetDatum, "Datum (*) (float4)"},
+    {"DatumGetFloat8", e_DatumGetFloat8, "float8 (*) (Datum)"},
+    {"Float8GetDatum", e_Float8GetDatum, "Datum (*) (float8)"},
+    {"construct_md_array", e_construct_md_array, "ArrayType* (*) (Datum *, bool *, int, int *, int *, Oid , int , bool , char )"},
+    {"InputFunctionCall", e_InputFunctionCall, "Datum (*) (FmgrInfo *, char *, Oid, int32)"},
+
+    {"heap_getattr", e_heap_getattr, "Datum (*) (HeapTuple, int16_t, TupleDesc, bool *)"},
+    {"FunctionCallInvoke", e_SPIFunctionCallInvoke, "Datum (*) (FunctionCallInfo, bool*)"},
+    {"SPI_prepare_cursor", e_SPI_prepare_cursor, "SPIPlanPtr (*) (const char *, int, Oid *, int)"},
+    {"SPI_execute_plan", e_SPI_execute_plan, "int (*) (SPIPlanPtr, Datum *, const char *, bool, long)"},
+
+    {"SPI_execute", e_SPI_execute, "int (*) (const char *, bool, long)"},
+
+    {"last_e", &last_edata, "struct {ErrorData* data;}*"},
+
+    {NULL, NULL}
+};
+
+
 #define MAX(a,b) (((a)>(b))?(a):(b))
 static lua_State * get_vm() {
     int status;
+    void** udata;
     lua_State *L = lua_open();
 
 #ifndef PLLJ_SKIP_LJVER_CHECK
@@ -495,6 +505,9 @@ static lua_State * get_vm() {
     lua_pushboolean(L, 0);
 #endif
     lua_setglobal(L, "__untrusted__");
+    udata = (void**) lua_newuserdata(L, sizeof(void*));
+    *udata = exp_data;
+    lua_setglobal(L, "__exp__");
 
     lua_pushinteger(L, MAX(0, call_depth-1));
     lua_setglobal(L, "__depth__");
@@ -667,12 +680,6 @@ static Datum lj_callhandler (FunctionCallInfo fcinfo) {
 
 static Datum lj_inlinehandler (FunctionCallInfo fcinfo) {
     return lj_call(fcinfo, &inline_ref);
-}
-
-extern Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
-Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull){
-    Datum value = heap_getattr(tuple, attnum, tupleDesc, isnull);
-    return value;
 }
 
 PGDLLEXPORT Datum _PG_init(PG_FUNCTION_ARGS);
