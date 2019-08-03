@@ -1,6 +1,20 @@
+set pllj.on_init = $$ 
+local env_add = require('pllj.env').add
+local function print_result(result)
+    print('__________')
+    for _, row in ipairs(result) do
+        print('|', unpack(row))
+    end
+    print('----------')
+end 
+env_add("print_result", print_result)
+$$;
+
 \set ECHO none
 CREATE EXTENSION pllj;
 \set ECHO all
+
+
 
 do $$
 assert(__untrusted__==false)
@@ -308,11 +322,7 @@ select * from pg_temp.test;
 
 CREATE or replace FUNCTION pg_temp.test_do() RETURNS void AS $$
     local result = spi.execute("UPDATE pg_temp.test set val='test' where val='t1' RETURNING id")
-    for _, row in ipairs(result) do
-        for _, col in ipairs(row) do
-            print (col)
-        end
-    end
+    print_result(result)
     error("cancel change")
 $$ language pllj;
 
@@ -340,13 +350,6 @@ do $$
 $$ language pllj;
 
 do $$
-    local function print_result(result)
-        print('__________')
-        for _, row in ipairs(result) do
-            print('|', unpack(row))
-        end
-        print('----------')
-    end
     local cursor = spi.cursor("select * from sometable")
     print_result(cursor:fetch())
     print_result(cursor:fetch())
@@ -373,13 +376,6 @@ $$ language pllj;
 
 
 do $$
-    local function print_result(result)
-        print('__________')
-        for _, row in ipairs(result) do
-            print('|', unpack(row))
-        end
-        print('----------')
-    end
     local plan = spi.prepare("select * from sometable where sid > $1 ;", {"integer"}):save_as("cursor test")
     local cursor = plan:cursor(1)
     local cursor3 = plan:cursor(3)

@@ -136,6 +136,5 @@ end
 
 return {
     env = env,
-    sandbox_env = sandbox,
     add = add,
 }

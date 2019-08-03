@@ -1,3 +1,13 @@
+set pllju.on_init = $$ 
+function print_result(result)
+    print('__________')
+    for _, row in ipairs(result) do
+        print('|', unpack(row))
+    end
+    print('----------')
+end 
+$$;
+
 CREATE EXTENSION pllju;
 
 do $$
@@ -200,13 +210,6 @@ do $$
 $$ language pllju;
 
 do $$
-    function print_result(result)
-        print('__________')
-        for _, row in ipairs(result) do
-            print('|', unpack(row))
-        end
-        print('----------')
-    end
     local cursor = spi.cursor("select * from sometable")
     print_result(cursor:fetch())
     print_result(cursor:fetch())

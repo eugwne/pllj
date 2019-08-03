@@ -27,7 +27,7 @@ typedef struct{
     ReturnSetInfo rsinfo;
 } pgfunc_srf;
 
-
+typedef struct {char* data;}* s_char_data_ptr;
 ]]
 
 _G.imported = {}
