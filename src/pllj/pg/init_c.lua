@@ -22,64 +22,34 @@ typedef struct LJFunctionData {
     Datum* result;
 } LJFunctionData;
 
-int lj_SPI_execute(const char *src, bool read_only, long tcount);
-int call_depth;
-Datum pllj_heap_getattr(HeapTuple tuple, int16_t attnum, TupleDesc tupleDesc, bool *isnull);
-Datum lj_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
-Datum ljm_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok);
-SPIPlanPtr lj_SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes, int cursorOptions);
-int lj_SPI_execute_plan(SPIPlanPtr plan, Datum * values, const char * nulls, bool read_only, long count);
-
-bool ljm_CALLED_AS_TRIGGER (void* fcinfo);
-float4 ljm_DatumGetFloat4(Datum X);
-Datum ljm_Float4GetDatum(float4 X);
-
-float8 ljm_DatumGetFloat8(Datum X);
-Datum ljm_Float8GetDatum(float8 X);
-
-ArrayType *
-lj_construct_md_array(Datum *elems,
-                    bool *nulls,
-                    int ndims,
-                    int *dims,
-                    int *lbs,
-                    Oid elmtype, int elmlen, bool elmbyval, char elmalign);
-
-Datum lj_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, int32 typmod);
-
-FuncCallContext *ljm_SRF_FIRSTCALL_INIT(FunctionCallInfo fcinfo);
-FuncCallContext *ljm_SRF_PERCALL_SETUP(FunctionCallInfo fcinfo);
-Datum ljm_SRF_RETURN_DONE(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
-Datum ljm_SRF_RETURN_NEXT(FunctionCallInfo fcinfo, FuncCallContext *funcctx);
-
-bool uthash_add(const char* key, void* value);
-void* uthash_find(const char* key);
-void* uthash_remove(const char* key);
-void uthash_iter(void (*cb_key) (const char *name));
-unsigned uthash_count(void);
-
-bool uthash_portal_add(const char* key, void* value);
-void* uthash_portal_find(const char* key);
-void* uthash_portal_remove(const char* key);
-
 typedef struct{
     ExprContext econtext;
     ReturnSetInfo rsinfo;
 } pgfunc_srf;
 
-void ljm_ItemPointerSetInvalid(ItemPointerData* pointer);
 
-Portal
-ljm_SPI_cursor_open_with_args(const char *name,
-                            const char *src,
-                            int nargs, Oid *argtypes,
-                            Datum *Values, const char *Nulls,
-                            bool read_only, int cursorOptions);
-
-void ljm_SPI_scroll_cursor_fetch(Portal portal, enum FetchDirection direction, long count);
-void ljm_SPI_scroll_cursor_move(Portal portal, enum FetchDirection direction, long count);
-Portal ljm_SPI_cursor_open(const char *name, SPIPlanPtr plan, Datum *Values, const char *Nulls, bool read_only);
 ]]
+
+_G.imported = {}
+
+do
+    local exp = ffi.cast('void**',__exp__)[0]
+    __exp__ = nil
+    local ar = ffi.cast([[struct {
+        const char *name;
+        void *ptr;
+        const char *tname;
+      }* ]], exp)
+
+    local function def(t, data)
+        t[ffi.string(data.name)] = ffi.cast(ffi.string(data.tname), data.ptr)
+    end
+    local index = 0
+    while ar[index].name ~= nil do
+        def(imported, ar[index])
+        index = index + 1
+    end
+end
 
 local function __top_alloc(size)
     return C.MemoryContextAlloc(C.TopMemoryContext, size)

@@ -320,7 +320,7 @@ local function find_function( value, opt )
             fn_init_args(args, argc, argtypes, finfo)
 
             _isok[0] = true
-            local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
+            local result = imported.FunctionCallInvoke(finfo, _isok)
             if _isok[0] == false then
                 local e = pg_error.get_exception_text()
                 return error("exec[".. (reg_name or funcoid).."] error:"..e)
@@ -352,7 +352,7 @@ local function find_function( value, opt )
             local iter = function()
 
                 _isok[0] = true
-                local result = C.ljm_SPIFunctionCallInvoke(finfo, _isok)
+                local result = imported.FunctionCallInvoke(finfo, _isok)
                 if _isok[0] == false then
                     local e = pg_error.get_exception_text()
                     return error("exec[".. (reg_name or funcoid).."] error:"..e)

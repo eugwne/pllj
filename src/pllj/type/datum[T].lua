@@ -95,7 +95,7 @@ local function string_to_rawdatum_rtti(rtti, value)
     local prev = C.CurrentMemoryContext
     C.CurrentMemoryContext = C.CurTransactionContext
 
-    local datum = C.lj_InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
+    local datum = imported.InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
     pg_error.throw_last_error();
     C.CurrentMemoryContext = prev
 
@@ -119,7 +119,7 @@ local function string_to_datum_T(T)
         local prev = C.CurrentMemoryContext
         C.CurrentMemoryContext = C.CurTransactionContext
 
-        local datum = C.lj_InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
+        local datum = imported.InputFunctionCall(rtti[3][0], ffi.cast('char*', text), inoid, -1)
         pg_error.throw_last_error();
         C.CurrentMemoryContext = prev
 

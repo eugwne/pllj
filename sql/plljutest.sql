@@ -356,3 +356,4 @@ do $$
     _, e = spi.find_cursor("del")
     print(string.find(e, "cursor not found")~=nil)
 $$ language pllju;
+

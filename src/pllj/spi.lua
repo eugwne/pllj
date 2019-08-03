@@ -191,7 +191,7 @@ end
 local function _portal_destructor(p)
     if p.closed == false then
         p.closed = true
-        C.uthash_portal_remove(p.name)
+        imported.uthash_portal_remove(p.name)
         C.pfree(ffi.cast(void_ptr_t, p.name))
         C.SPI_cursor_close(p.portal)
     end
@@ -202,7 +202,7 @@ local portal_ptr_release = intrusive_ptr_release_F(_portal_destructor)
 local cb_cursor = function(arg)
     local p = ffi.cast(shared_portal_ptr_t, arg)
     if p.closed == false then
-        C.uthash_portal_remove(p.name)
+        imported.uthash_portal_remove(p.name)
         C.pfree(ffi.cast(void_ptr_t, p.name))
     end
     p.closed = true
@@ -216,7 +216,7 @@ local function _shared_portal_new(portal)
     gcp.portal = portal
     gcp.closed = false
     gcp.name = C.MemoryContextStrdup(C.TopMemoryContext, portal.name)
-    local result = C.uthash_portal_add(portal.name, gcp) 
+    local result = imported.uthash_portal_add(portal.name, gcp) 
     return gcp
 end
 
@@ -287,7 +287,7 @@ end
 local function plan_exec(self, ...)
     local prepared_plan = unwrap(self)[1]
     local values, nulls = prepare_plan_args(prepared_plan, {...})
-    local result = C.lj_SPI_execute_plan(prepared_plan.plan, values, nulls, opt.readonly, 0)
+    local result = imported.SPI_execute_plan(prepared_plan.plan, values, nulls, opt.readonly, 0)
     pg_error.throw_last_error("SPI execute plan error: ")
     return process_query_result(result)
 end
@@ -296,7 +296,7 @@ local function plan_save_as(self, name)
 
     local plan = unwrap(self)[1]
 
-    local result = C.uthash_add(tostring(name), plan) 
+    local result = imported.uthash_add(tostring(name), plan) 
     if result == true then
         intrusive_ptr_add_ref(plan)
     else
@@ -312,7 +312,7 @@ local function plan_named_cursor(self, name, ...)
     end
     local prepared_plan = unwrap(self)[1]
     local values, nulls = prepare_plan_args(prepared_plan, {...})
-    local portal = C.ljm_SPI_cursor_open(name, prepared_plan.plan, values, nulls, opt.readonly)
+    local portal = imported.SPI_cursor_open(name, prepared_plan.plan, values, nulls, opt.readonly)
     pg_error.throw_last_error("SPI cursor error: ")
     return wrap_new_portal(portal)
 end
@@ -360,7 +360,7 @@ local function cursor_fetch(self, count, direction)
     count = count or 1
     direction_id = cursor_directions[direction] or 0
     --try
-    C.ljm_SPI_scroll_cursor_fetch(portal, direction_id, count)
+    imported.SPI_scroll_cursor_fetch(portal, direction_id, count)
     --catch
     pg_error.throw_last_error("SPI execute error: ")
 
@@ -373,7 +373,7 @@ local function cursor_move(self, count, direction)
     count = count or 1
     direction_id = cursor_directions[direction] or 0
     --try
-    C.ljm_SPI_scroll_cursor_move(portal, direction_id, count)
+    imported.SPI_scroll_cursor_move(portal, direction_id, count)
     --catch
     pg_error.throw_last_error("SPI execute error: ")
 end
@@ -395,7 +395,7 @@ cursor_mt = {
 
 
 function spi.find_plan(name)
-    local result = C.uthash_find(tostring(name))
+    local result = imported.uthash_find(tostring(name))
     if result ~= nil then
         local p = _shared_from(result)
         return wrap ({p}, plan_mt)
@@ -406,7 +406,7 @@ end
 
 function spi.execute(query)
     --try
-    local result = C.lj_SPI_execute(query, opt.readonly, 0)
+    local result = imported.SPI_execute(query, opt.readonly, 0)
     --catch
     pg_error.throw_last_error("SPI execute error: ")
     
@@ -422,7 +422,7 @@ function spi.prepare(query, arg_types)
         local oid = get_oid_from_name(arg_types[i]) --call_pg_c_variadic(C.to_regtype, {text_to_pg(arg_types[i])})
         p.oids[i-1] = oid
     end
-    local plan = C.lj_SPI_prepare_cursor(query, p.argc, p.oids, 0)
+    local plan = imported.SPI_prepare_cursor(query, p.argc, p.oids, 0)
     pg_error.throw_last_error("SPI_prepare_cursor error:")
     p.plan = plan
 
@@ -434,7 +434,7 @@ end
 
 
 function spi.find_cursor(name)
-    local result = C.uthash_portal_find(name)
+    local result = imported.uthash_portal_find(name)
 
     if result ~= nil then
         local p = _shared_portal_from(result)
@@ -485,7 +485,7 @@ function spi.named_cursor(name, query, arg_types, args)
             #define CURSOR_OPT_PARALLEL_OK	0x0100	/* parallel mode OK */
     ]]
 
-    local portal = C.ljm_SPI_cursor_open_with_args(name,
+    local portal = imported.SPI_cursor_open_with_args(name,
                                                     query,
                                                     argc, oids,
                                                     values, nulls,
@@ -506,16 +506,16 @@ end
 local cb_key_c = ffi.cast("void (*) (const char *)", cb_key)
 
 function spi.get_saved_plan_names()
-    local size = tonumber(C.uthash_count())
+    local size = tonumber(imported.uthash_count())
     cb_data.names = table_new(size, 0)
-    C.uthash_iter(cb_key_c)
+    imported.uthash_iter(cb_key_c)
     return cb_data.names
 end
 
 
 function spi.free_plan(name)
     local sname = tostring(name)
-    local result = C.uthash_remove(sname)
+    local result = imported.uthash_remove(sname)
 
     if result ~= nil then
         plan_ptr_release(result)

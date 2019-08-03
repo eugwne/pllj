@@ -21,7 +21,7 @@ return {
         tuple.t_len = macro.HeapTupleHeaderGetDatumLength(header);
         tuple.t_tableOid = C.InvalidOid;
         tuple.t_data = header;
-        C.ljm_ItemPointerSetInvalid(tuple.t_self);
+        imported.ItemPointerSetInvalid(tuple.t_self);
  
         local row = tuple_to_lua_table(tdesc, tuple)
         macro.ReleaseTupleDesc(tdesc);

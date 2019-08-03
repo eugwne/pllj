@@ -113,7 +113,7 @@ local function to_datum_T(T)
             local prev = C.CurrentMemoryContext
             C.CurrentMemoryContext = C.CurTransactionContext
     
-            local arr = C.lj_construct_md_array(d, nulls, ndims, dims, lbs, elmtype, typ.len, typ.byval, typ.align)
+            local arr = imported.construct_md_array(d, nulls, ndims, dims, lbs, elmtype, typ.len, typ.byval, typ.align)
             C.CurrentMemoryContext = prev
             pg_error.throw_last_error("construct_md_array error: ")
     
