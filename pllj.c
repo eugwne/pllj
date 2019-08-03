@@ -13,6 +13,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "utils/memutils.h"
+#include "utils/guc.h"
 
 #include "access/htup_details.h"
 #include "access/xact.h"
@@ -50,6 +51,14 @@ PG_MODULE_MAGIC;
 
 #define CODEBLOCK \
     ((InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0)))->source_text
+
+static char *_on_init = NULL;
+#ifdef PLLJ_UNTRUSTED
+static char *_on_untrusted_init = NULL;
+#else
+static char *_on_trusted_init = NULL;
+#endif
+
 
 static void pllj_parse_error(lua_State *L, ErrorData *edata){
     edata->message = NULL;
@@ -480,6 +489,13 @@ static struct {
     {"SPI_execute", e_SPI_execute, "int (*) (const char *, bool, long)"},
 
     {"last_e", &last_edata, "struct {ErrorData* data;}*"},
+    {"_on_init", &_on_init, "s_char_data_ptr"},
+
+#ifdef PLLJ_UNTRUSTED
+    {"_on_untrusted_init", &_on_untrusted_init, "s_char_data_ptr"},
+#else
+    {"_on_trusted_init", &_on_trusted_init, "s_char_data_ptr"},
+#endif
 
     {NULL, NULL}
 };
@@ -696,6 +712,13 @@ PGDLLEXPORT Datum pllj_inline_handler(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(_PG_init);
 Datum _PG_init(PG_FUNCTION_ARGS) {
+    DefineCustomStringVariable("pllj.on_init_all", "pllj/pllju preinitialization code", NULL, &_on_init, NULL, PGC_SIGHUP, 0, NULL, NULL, NULL);
+#ifdef PLLJ_UNTRUSTED
+    DefineCustomStringVariable("pllju.on_init", "pllju preinitialization code", NULL, &_on_untrusted_init, NULL, PGC_SUSET, 0, NULL, NULL, NULL);
+#else
+    DefineCustomStringVariable("pllj.on_init", "pllj preinitialization code", NULL, &_on_trusted_init, NULL, PGC_SUSET, 0, NULL, NULL, NULL);
+#endif
+
     AL[0] = get_vm();
 #ifdef PLLJ_UNTRUSTED
     lua_getfield(AL[0], 1, "inlinehandler_u");

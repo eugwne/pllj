@@ -144,7 +144,6 @@ end
 
 
 function pllj.inlinehandler(text)
-
     spi_opt.readonly = false
     local f, err = loadstring(text, nil, "t", env)
     if (f) then
@@ -155,10 +154,30 @@ function pllj.inlinehandler(text)
     return 
 end
 
+function inithandler(data)
+    if data == nil then return end
+    local f, err = loadstring(ffi.string(data), nil, "t", _G)
+    if (f) then
+        exec(f)
+    else
+        return log(err)
+    end
+    return 
+end
+
 
 pllj.validator_u = pllj.validator
 pllj.callhandler_u = pllj.callhandler
 pllj.inlinehandler_u = pllj.inlinehandler
 
+do
+    inithandler(imported._on_init.data)
+    if __untrusted__ then
+        inithandler(imported._on_untrusted_init.data)
+    else
+        inithandler(imported._on_trusted_init.data)
+    end
+
+end
 
 return pllj
