@@ -169,24 +169,25 @@ local function gc_check_callback(raw)
     C.pfree(raw)
 end
 
-local init_arguments
 local FunctionCallInfo_create
+local strict_init_args
+local not_strict_init_args
 if --[[------------------------------------------------------------]] C.PG_VERSION_NUM >= 120000 then
-    init_arguments = function (strict)
-        if strict then
-            return function(args, argc, argtypes, info)
-                for i = 0, argc - 1 do
-                    local ref_arg = info.args[i]
-                    ref_arg.value,  ref_arg.isnull = to_pg(argtypes[0][i])(args[i+1])
-                    if ref_arg.isnull == true then return error('strict function null arg['..tostring(i)..']') end
+    strict_init_args = function(args, argc, argtypes, info, argmodes)
+        for i = 0, argc - 1 do
+            local ref_arg = info.args[i]
+            ref_arg.value,  ref_arg.isnull = to_pg(argtypes[0][i])(args[i+1])
+            if ref_arg.isnull == true then 
+                if not (argmodes[0] ~= nil and argmodes[0][i] == string.byte('o')) then
+                    return error('strict function null arg['..tostring(i)..']') 
                 end
             end
-        else
-            return function(args, argc, argtypes, info)
-                for i = 0, argc - 1 do
-                    info.args[i].value,  info.args[i].isnull = to_pg(argtypes[0][i])(args[i+1])
-                end
-            end
+        end
+    end
+
+    not_strict_init_args = function(args, argc, argtypes, info)
+        for i = 0, argc - 1 do
+            info.args[i].value,  info.args[i].isnull = to_pg(argtypes[0][i])(args[i+1])
         end
     end
 
@@ -197,22 +198,22 @@ if --[[------------------------------------------------------------]] C.PG_VERSI
     end
 
 elseif --[[------------------------------------------------------------]] C.PG_VERSION_NUM < 120000 then
-    init_arguments = function (strict)
-        if strict then
-            return function(args, argc, argtypes, info)
-                ffi.fill(info.argnull, argc)
-                for i = 0, argc - 1 do
-                    info.arg[i], info.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
-                    if info.argnull[i] == true then return error('strict function null arg['..tostring(i)..']') end
+    strict_init_args = function(args, argc, argtypes, info)
+        ffi.fill(info.argnull, argc)
+        for i = 0, argc - 1 do
+            info.arg[i], info.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
+            if info.argnull[i] == true then 
+                if not (argmodes[0] ~= nil and argmodes[0][i] == string.byte('o')) then
+                    return error('strict function null arg['..tostring(i)..']') 
                 end
             end
-        else
-            return function(args, argc, argtypes, info)
-                ffi.fill(info.argnull, argc)
-                for i = 0, argc - 1 do
-                    info.arg[i], info.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
-                end
-            end
+        end
+    end
+
+    not_strict_init_args = function(args, argc, argtypes, info)
+        ffi.fill(info.argnull, argc)
+        for i = 0, argc - 1 do
+            info.arg[i], info.argnull[i] = to_pg(argtypes[0][i])(args[i+1])
         end
     end
 
@@ -220,6 +221,14 @@ elseif --[[------------------------------------------------------------]] C.PG_V
         local raw = top_alloc(ffi.sizeof('struct FunctionCallInfoData'))
         local finfo = ffi.gc(ffi.cast('FunctionCallInfo', raw), gc_check_callback)
         return finfo
+    end
+end
+
+local function init_arguments(strict)
+    if strict then
+        return strict_init_args
+    else
+        return not_strict_init_args
     end
 end
 
@@ -317,7 +326,7 @@ local function find_function( value, opt )
             local args = {...}
 
             macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil, nil)
-            fn_init_args(args, argc, argtypes, finfo)
+            fn_init_args(args, argc, argtypes, finfo, argmodes)
 
             _isok[0] = true
             local result = imported.FunctionCallInvoke(finfo, _isok)
@@ -346,7 +355,7 @@ local function find_function( value, opt )
 
             macro.InitFunctionCallInfoData(finfo, fmgrInfo, argc, C.InvalidOid, nil
                 , ffi.cast('struct Node *', result_info.rsinfo))
-            fn_init_args(args, argc, argtypes, finfo)
+            fn_init_args(args, argc, argtypes, finfo, argmodes)
 
             local _isok = ffi.new("bool[?]", 1)
             local iter = function()

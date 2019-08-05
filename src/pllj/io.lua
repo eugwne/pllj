@@ -17,6 +17,7 @@ local to_lua
 local to_pg
 
 local function add_io(type)
+    if not type then return end
     type_map[tonumber(type.oid)] = { 
         to_lua = type.to_lua or type.OUTPUT,
         to_datum = type.to_datum or type.INPUT 
@@ -38,6 +39,8 @@ add_io(require('pllj.type.int4array'))
 add_io(require('pllj.type.int8array'))
 add_io(require('pllj.type.textarray'))
 add_io(require('pllj.type.record'))
+
+add_io(require('pllj.type.hstore'))
 
 
 local function create_converter_tolua(oid)
