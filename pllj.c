@@ -202,12 +202,14 @@ static Datum e_InputFunctionCall(FmgrInfo *flinfo, char *str, Oid typioparam, in
     return 0;
 }
 
+#if PG_VERSION_NUM >= 100000
 static Datum e_FunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
     LJ_BEGIN_PG_TRY()
         return FunctionCallInvoke(fcinfo);
     LJ_END_PG_TRY( {*isok = false;})
     return 0;
 }
+#endif
 
 static Datum e_SPIFunctionCallInvoke(FunctionCallInfo fcinfo, bool* isok) {
 #if PG_VERSION_NUM < 100000
