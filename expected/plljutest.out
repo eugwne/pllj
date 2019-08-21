@@ -24,34 +24,34 @@ do $$
 $$ language pllju;
 INFO:  'qwerty'
 INFO:  NULL
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":5, "b":10}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":5, "b":10}'::json
 $$ language sql;
 do $$
     local get_json = load_function('pg_temp.get_json()')
     print(get_json())
 $$ language pllju;
-INFO:  {"a": 5, "b": 10}
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":50, "b":100}'::jsonb
+INFO:  {"a":5, "b":10}
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":50, "b":100}'::json
 $$ language sql;
 do $$
     local get_json = load_function('pg_temp.get_json()')
     print(get_json())
 $$ language pllju;
-INFO:  {"a": 50, "b": 100}
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":5, "b":10}'::jsonb
+INFO:  {"a":50, "b":100}
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":5, "b":10}'::json
 $$ language sql;
 do $$
     g_json = find_function('pg_temp.get_json()')
     print(g_json())
     print(type(g_json()[-1]))
 $$ language pllju;
-INFO:  {"a": 5, "b": 10}
+INFO:  {"a":5, "b":10}
 INFO:  cdata
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":50, "b":100}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":50, "b":100}'::json
 $$ language sql;
 CREATE or replace FUNCTION pg_temp.add(integer, integer) RETURNS integer
 AS 'select $1 + $2;'

@@ -41,6 +41,7 @@ add_io(require('pllj.type.textarray'))
 add_io(require('pllj.type.record'))
 
 add_io(require('pllj.type.hstore'))
+add_io(require('pllj.type.jsonb'))
 
 
 local function create_converter_tolua(oid)

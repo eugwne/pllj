@@ -33,7 +33,8 @@ composite \
 setof \
 inout \
 hstoretest \
-ereport
+ereport \
+jsonbtest
 
 endif
 
@@ -96,5 +97,6 @@ install-module:
 	cp src/pllj/type/textarray.lua $(LUA_DIR)/pllj/type/textarray.lua
 	cp src/pllj/type/record.lua $(LUA_DIR)/pllj/type/record.lua
 	cp src/pllj/type/hstore.lua $(LUA_DIR)/pllj/type/hstore.lua
+	cp src/pllj/type/jsonb.lua $(LUA_DIR)/pllj/type/jsonb.lua
 	cp src/pllj/type/rtti.lua $(LUA_DIR)/pllj/type/rtti.lua
 

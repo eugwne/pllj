@@ -5,23 +5,23 @@ print(fn(nil))
 $$ language pllj;
 INFO:  'qwerty'
 INFO:  NULL
-create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":5, "b":10}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+select '{"a":5, "b":10}'::json
 $$ language sql;
 do $$
     local get_json = load_function('pg_temp.get_json()')
     print(get_json())
 $$ language pllj;
-INFO:  {"a": 5, "b": 10}
-create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":50, "b":100}'::jsonb
+INFO:  {"a":5, "b":10}
+create or replace function pg_temp.get_json() returns json as $$
+select '{"a":50, "b":100}'::json
 $$ language sql;
 do $$
 local get_json = load_function('pg_temp.get_json()')
 print(get_json())
 print(type(get_json()[-1]))
 $$ language pllj;
-INFO:  {"a": 50, "b": 100}
+INFO:  {"a":50, "b":100}
 INFO:  nil
 drop function pg_temp.get_json();
 do $$

@@ -33,6 +33,8 @@
 #include <utils/typcache.h>
 #include <utils/portal.h>
 #include <nodes/parsenodes.h>
+#include <utils/jsonb.h>
+#include <utils/numeric.h>
 
 #if PG_VERSION_NUM >= 130000
 #include <tcop/cmdtag.h>
@@ -307,6 +309,8 @@ cdecl_const(INT2ARRAYOID)
 cdecl_const(INT4ARRAYOID)
 cdecl_const(TEXTARRAYOID)
 cdecl_const(BOOLOID)
+cdecl_const(JSONBOID)
+
 
 //cdecl_func(stringToQualifiedNameList)
 cdecl_func(parseTypeString)
@@ -416,5 +420,37 @@ cdecl_func(MemoryContextRegisterResetCallback)
 cdecl_enum(FetchDirection)
 
 cdecl_func(MemoryContextStrdup)
+
+cdecl_func(numeric_out)
+cdecl_func(numeric_in)
+cdecl_type(Numeric)
+
+cdecl_type(JsonbIteratorToken)
+cdecl_type(JsonbIterState)
+
+cdecl_struct(JsonbContainer)
+cdecl_type(JsonbContainer)
+
+cdecl_struct(JsonbIterator)
+cdecl_type(JsonbIterator)
+
+cdecl_nstruct(Jsonb)
+cdecl_type(Jsonb)
+
+cdecl_func(JsonbIteratorInit)
+
+cdecl_type(JsonbValue)
+cdecl_func(JsonbIteratorNext)
+
+cdecl_enum(jbvType)
+cdecl_struct(JsonbValue)
+cdecl_func(JsonbValueToJsonb)
+
+cdecl_struct(JsonbParseState)
+cdecl_type(JsonbParseState)
+
+cdecl_func(pushJsonbValue)
+
+
 
 cdecl_const(PG_VERSION_NUM)

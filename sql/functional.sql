@@ -4,8 +4,8 @@ print(fn("qwerty"))
 print(fn(nil))
 $$ language pllj;
 
-create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":5, "b":10}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+select '{"a":5, "b":10}'::json
 $$ language sql;
 
 do $$
@@ -13,8 +13,8 @@ do $$
     print(get_json())
 $$ language pllj;
 
-create or replace function pg_temp.get_json() returns jsonb as $$
-select '{"a":50, "b":100}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+select '{"a":50, "b":100}'::json
 $$ language sql;
 
 do $$
