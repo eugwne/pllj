@@ -34,6 +34,10 @@
 #include <utils/portal.h>
 #include <nodes/parsenodes.h>
 
+#if PG_VERSION_NUM >= 130000
+#include <tcop/cmdtag.h>
+#endif
+
 #define cdecl_nstruct(tag)               void cdecl_struct__ ## tag(tag *unused) {}
 
 cdecl_struct(varlena)
@@ -392,6 +396,9 @@ cdecl_func(UnregisterExprContextCallback)
 cdecl_enum(TypeFuncClass)
 cdecl_func(get_call_result_type)
 
+cdecl_enum(CommandTag)
+cdecl_struct(QueryCompletion)
+
 cdecl_type(Portal)
 cdecl_enum(PortalStrategy)
 cdecl_enum(PortalStatus)
@@ -401,7 +408,6 @@ cdecl_struct(PortalData)
 cdecl_func(GetPortalByName)
 //cdecl_func(SPI_cursor_open)
 cdecl_func(SPI_cursor_close)
-
 
 
 cdecl_struct(MemoryContextCallback)
