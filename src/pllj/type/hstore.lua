@@ -10,7 +10,14 @@ if hstore_oid == 0 then
 end
 
 local table_new = require('table.new')
-local nkeys = require ("table.nkeys")
+local nkeys_loaded, nkeys = pcall(require, "table.nkeys")
+if not nkeys_loaded then
+    nkeys = function (T)
+        local count = 0
+        for _ in pairs(T) do count = count + 1 end
+        return count
+    end
+end
 
 ffi.cdef[[
 

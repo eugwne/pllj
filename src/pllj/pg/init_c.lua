@@ -84,6 +84,7 @@ nullptr = ffi.cast('void*', NULL)
 --NULL = ffi.new("void*")
 ffi.NULL = NULL
 
+
 local function __report(elevel, data)
     local elevel = math.min(elevel, C.WARNING)
     local message 
@@ -117,20 +118,37 @@ local function __report(elevel, data)
         message = data and tostring(data) or ""
     end 
 
-    C.errstart(elevel, "", 0, nil, nil)
-    C.errfinish(C.errcode(sqlerrcode and sqlerrcode or C.ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-        C.errmsg_internal(message),
-        detail and C.errdetail_internal(tostring(detail)) or 0,
-        --TODO context
-        hint and  C.errhint(tostring(hint)) or 0,
-        query and C.internalerrquery(tostring(query)) or 0,
-        position and C.internalerrposition(position) or 0,
-        schema_name and C.err_generic_string(string.byte('s'), tostring(schema_name)) or 0,--PG_DIAG_SCHEMA_NAME,
-        table_name and C.err_generic_string(string.byte('t'), tostring(table_name)) or 0,--PG_DIAG_TABLE_NAME,
-        column_name and C.err_generic_string(string.byte('c'), tostring(column_name)) or 0,--PG_DIAG_COLUMN_NAME,
-        datatype_name and C.err_generic_string(string.byte('d'), tostring(datatype_name)) or 0,--PG_DIAG_DATATYPE_NAME,
-        constraint_name and C.err_generic_string(string.byte('n'), tostring(constraint_name)) or 0--PG_DIAG_CONSTRAINT_NAME,
-    )
+
+    if C.PG_VERSION_NUM >= 130000 then
+        C.errstart(elevel, nil)
+        C.errcode(sqlerrcode and sqlerrcode or C.ERRCODE_EXTERNAL_ROUTINE_EXCEPTION)
+        C.errmsg_internal(message)
+        if detail then C.errdetail_internal(tostring(detail)) end
+        if hint then C.errhint(tostring(hint)) end
+        if query then C.internalerrquery(tostring(query)) end
+        if position then C.internalerrposition(position) end
+        if schema_name then C.err_generic_string(string.byte('s'), tostring(schema_name)) end
+        if table_name then C.err_generic_string(string.byte('t'), tostring(table_name)) end
+        if column_name then C.err_generic_string(string.byte('c'), tostring(column_name)) end
+        if datatype_name then C.err_generic_string(string.byte('d'), tostring(datatype_name)) end
+        if constraint_name then C.err_generic_string(string.byte('n'), tostring(constraint_name)) end
+        C.errfinish(nil, 0, nil)
+    else
+        C.errstart(elevel, "", 0, nil, nil)
+        C.errfinish(C.errcode(sqlerrcode and sqlerrcode or C.ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+            C.errmsg_internal(message),
+            detail and C.errdetail_internal(tostring(detail)) or 0,
+            --TODO context
+            hint and  C.errhint(tostring(hint)) or 0,
+            query and C.internalerrquery(tostring(query)) or 0,
+            position and C.internalerrposition(position) or 0,
+            schema_name and C.err_generic_string(string.byte('s'), tostring(schema_name)) or 0,--PG_DIAG_SCHEMA_NAME,
+            table_name and C.err_generic_string(string.byte('t'), tostring(table_name)) or 0,--PG_DIAG_TABLE_NAME,
+            column_name and C.err_generic_string(string.byte('c'), tostring(column_name)) or 0,--PG_DIAG_COLUMN_NAME,
+            datatype_name and C.err_generic_string(string.byte('d'), tostring(datatype_name)) or 0,--PG_DIAG_DATATYPE_NAME,
+            constraint_name and C.err_generic_string(string.byte('n'), tostring(constraint_name)) or 0--PG_DIAG_CONSTRAINT_NAME,
+        )
+    end
 end 
 
 local function __log(data)
@@ -150,26 +168,52 @@ local function __warning(data)
 end
 
 local __pg_print
-__pg_print = function(...)
-    local args = {...}
-    local argc = #args
+if C.PG_VERSION_NUM >= 130000 then
+    __pg_print = function(...)
+        local args = {...}
+        local argc = #args
 
-    if argc < 2 then
-        local text = args[1]
-        C.errstart(C.INFO, "", 0, nil, nil)
-        C.errfinish(C.errmsg_internal(tostring(text)))
+        if argc < 2 then
+            local text = args[1]
+            C.errstart(C.INFO, nil)
+            C.errmsg_internal(tostring(text))
+            C.errfinish(nil, 0, nil)
+            return __pg_print
+        end
+        local tmp = table_new(argc * 2, 0)
+        table.insert(tmp, tostring(args[1]))
+        for k = 2, argc  do
+            table.insert(tmp, ' ')
+            table.insert(tmp, tostring(args[k]))
+        end
+        local output = table.concat(tmp)
+        C.errstart(C.INFO, nil)
+        C.errmsg_internal(tostring(output))
+        C.errfinish(nil, 0, nil)
         return __pg_print
     end
-    local tmp = table_new(argc * 2, 0)
-    table.insert(tmp, tostring(args[1]))
-    for k = 2, argc  do
-        table.insert(tmp, ' ')
-        table.insert(tmp, tostring(args[k]))
+else --C.PG_VERSION_NUM < 130000
+    __pg_print = function(...)
+        local args = {...}
+        local argc = #args
+
+        if argc < 2 then
+            local text = args[1]
+            C.errstart(C.INFO, "", 0, nil, nil)
+            C.errfinish(C.errmsg_internal(tostring(text)))
+            return __pg_print
+        end
+        local tmp = table_new(argc * 2, 0)
+        table.insert(tmp, tostring(args[1]))
+        for k = 2, argc  do
+            table.insert(tmp, ' ')
+            table.insert(tmp, tostring(args[k]))
+        end
+        local output = table.concat(tmp)
+        C.errstart(C.INFO, "", 0, nil, nil)
+        C.errfinish(C.errmsg_internal(tostring(output)))
+        return __pg_print
     end
-    local output = table.concat(tmp)
-    C.errstart(C.INFO, "", 0, nil, nil)
-    C.errfinish(C.errmsg_internal(tostring(output)))
-    return __pg_print
 end
 
 top_alloc = __top_alloc
