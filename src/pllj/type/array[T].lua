@@ -59,7 +59,7 @@ local function to_datum_T(T)
     local typ = macro.get_typlenbyvalalign(elmtype)
 
     local to_datum = function(lv)
-        if lv == nil or lv == NULL then
+        if lv == NULL then
             return ffi.cast('Datum', 0), true
         end
         local type_name = type(lv)

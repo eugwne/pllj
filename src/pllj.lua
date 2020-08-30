@@ -123,7 +123,7 @@ function pllj.callhandler(ctx)
     if not iof then
         return error('no conversion for type ' .. tostring(func_struct.prorettype))
     end
-    if not result or result == NULL then
+    if type(result) == 'nil' then
         fcinfo.isnull = true
         return 
     end

@@ -26,8 +26,8 @@ do $$
     print(fn(nil))
 $$ language pllju;
 
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":5, "b":10}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":5, "b":10}'::json
 $$ language sql;
 
 do $$
@@ -35,8 +35,8 @@ do $$
     print(get_json())
 $$ language pllju;
 
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":50, "b":100}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":50, "b":100}'::json
 $$ language sql;
 
 do $$
@@ -44,8 +44,8 @@ do $$
     print(get_json())
 $$ language pllju;
 
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":5, "b":10}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":5, "b":10}'::json
 $$ language sql;
 
 do $$
@@ -54,8 +54,8 @@ do $$
     print(type(g_json()[-1]))
 $$ language pllju;
 
-create or replace function pg_temp.get_json() returns jsonb as $$
-    select '{"a":50, "b":100}'::jsonb
+create or replace function pg_temp.get_json() returns json as $$
+    select '{"a":50, "b":100}'::json
 $$ language sql;
 
 CREATE or replace FUNCTION pg_temp.add(integer, integer) RETURNS integer
