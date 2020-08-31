@@ -3,8 +3,12 @@ LuaJIT(2.1) FFI PostgreSQL language extension
 
 Examples: see sql folder
 
-How to build: see .travis.yml 
+How to build: 
+Use artifact with generated FFI
+make && sudo make install && sudo make install-module && make installcheck
 
-FFI wrappers are generated with a gcc plugin from gen/gen.c (see .travis.yml)
+How to build and generate FFI: 
+see .travis.yml 
 
-Travis saves updated FFI wrappers to branches with name = $PGVERSION
+FFI wrappers(api_...) are generated with a gcc plugin from gen/gen.c (see .travis.yml)
+
