@@ -4,14 +4,17 @@ local C = ffi.C
 local table_new = require('table.new')
 
 ffi.cdef[[
+extern char *pllj_pg_major_version;
 const char *
 GetConfigOption(const char *name, bool missing_ok, bool restrict_privileged);
 struct PortalData;
 ]]
 local api_version = ffi.string(C.GetConfigOption('server_version_num', true, false))
 
-
-local all_types = (require('pllj.pg.api_'..api_version) or require('pllj.pg.i')).all_types
+local all_types = (
+    require('pllj.pg.api_'..api_version) or 
+    require('pllj.pg.api_'..ffi.string(C.pllj_pg_major_version)) or
+    require('pllj.pg.i')).all_types
 ffi.cdef(all_types)
 
 ffi.cdef[[

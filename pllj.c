@@ -52,6 +52,9 @@ PG_MODULE_MAGIC;
 #define CODEBLOCK \
     ((InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0)))->source_text
 
+extern char *pllj_pg_major_version;
+char *pllj_pg_major_version = PG_MAJORVERSION;
+
 static char *_on_init = NULL;
 #ifdef PLLJ_UNTRUSTED
 static char *_on_untrusted_init = NULL;
